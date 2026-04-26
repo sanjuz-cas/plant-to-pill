@@ -1,6 +1,6 @@
-# plant-to-pill
+
 Interactive browser demos for prototyping plant drug Cyclotides ensuring safe Oral Drug delivery - no lab required.
-# From Plant to Pill: Simulating cyclopeptides for Oral drug delivery
+# Plant to Pill: Simulating cyclopeptides for Oral drug delivery
 
 Interactive browser demos for prototyping gut-stable circular peptides — no lab required.
 
