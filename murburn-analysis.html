@@ -260,7 +260,7 @@
         p.z += -p.z * 0.03 + p.vz;
         
         let dist = Math.sqrt(p.x*p.x + p.y*p.y + p.z*p.z);
-        if(dist < 8.5) { // Collision radius
+        if(dist < 4.5) { // Collision radius made tighter for realistic impact
           p.active = false;
           hitOccurred = true;
           const dmg = isLinear ? (Math.random() * 8.0 + 4.0) : (Math.random() * 1.5 + 0.5);
@@ -275,17 +275,20 @@
             logMsg(`Knot deflected DROS attack at CYS-${targetResi}`);
             activeShields.push({x: p.x, y: p.y, z: p.z});
           } else {
-             if (isLinear && Math.random() > 0.5) logMsg(`Cleavage detected on linear chain at ${sequence[targetResi-1]}-${targetResi}!`, true);
-             // Severe oxidation: turning the residue burnt/red
+             if (isLinear && Math.random() > 0.5) logMsg(`Oxidative cleavage on linear chain at ${sequence[targetResi-1]}-${targetResi}!`, true);
+             // Severe oxidation: turning the residue burnt/red and breaking structure
              viewer.setStyle({resi: targetResi}, {
-               cartoon: {color: colors.damaged},
-               sphere: {color: 0xff3300, radius: 0.8},
-               stick: {hidden: true}
+               cartoon: {color: colors.damaged, opacity: 0.5},
+               sphere: {color: '#ff3300', radius: 0.6},
+               stick: {color: 'black', radius: 0.1}
              });
+             // Add an explosion flash at impact
+             viewer.addSphere({center: {x: p.x, y: p.y, z: p.z}, radius: 2.0, color: 'white', alpha: 0.8});
           }
         } else {
-          // Draw the DROS radical as a glowing red/orange sphere
-          viewer.addSphere({center: {x: p.x, y: p.y, z: p.z}, radius: 0.8, color: 'red', alpha: 0.7});
+          // Draw the DROS radical as a glowing orange/yellow core with red aura
+          viewer.addSphere({center: {x: p.x, y: p.y, z: p.z}, radius: 0.3, color: '#facc15', alpha: 1.0}); // Core
+          viewer.addSphere({center: {x: p.x, y: p.y, z: p.z}, radius: 0.7, color: '#ef4444', alpha: 0.5}); // Aura
         }
       });
 
