@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plant2Pill — Manufacturability & Folding Yield</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=IBM+Plex+Mono&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: 'Inter', sans-serif; background: #f8fafc; }
+   .mono { font-family: 'IBM Plex Mono', monospace; }
+  </style>
+</head>
+<body class="text-slate-800">
+  <!-- Nav -->
+  <nav class="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-2">
+      <div class="w-8 h-8 bg-blue-600 rounded flex items-center justify-center text-white font-bold">P2</div>
+      <span class="font-semibold text-lg">Plant2Pill</span>
+      <span class="text-xs bg-slate-100 px-2 py-0.5 rounded ml-2">beta</span>
+    </div>
+    <div class="flex gap-6 text-sm">
+      <a href="index.html" class="text-slate-600 hover:text-slate-900">Design</a>
+      <a href="murburn-analysis.html" class="text-slate-600 hover:text-slate-900">Efficacy (Murburn)</a>
+      <a href="cyclotide-manufacturability.html" class="text-blue-600 font-medium">Cost (Mfg)</a>
+      <a href="#" class="text-slate-600 hover:text-slate-900">GitHub</a>
+    </div>
+  </nav>
+
+  <div class="max-w-[1400px] mx-auto p-6 grid grid-cols-12 gap-6">
+    <!-- LEFT -->
+    <div class="col-span-3 bg-white rounded-lg border border-slate-200 p-5 h-fit">
+      <h2 class="font-semibold mb-4">Synthesis Parameters</h2>
+
+      <label class="text-sm text-slate-600">Peptide Origin Sequence</label>
+      <select id="sequenceType" title="Sequence Type" class="w-full mt-1 mb-4 px-3 py-2 border border-slate-300 rounded text-sm">
+        <option value="native">Native Kalata B1 (Baseline)</option>
+        <option value="optimized" selected>dWJS Optimized Sequence</option>
+        <option value="random">Random Cys-Knot</option>
+      </select>
+
+      <label class="text-sm text-slate-600">Thermodynamic Favorability</label>
+      <div class="flex justify-between items-center text-xs mt-1">
+        <span>Low (1/15 isomers)</span>
+        <span>High (Directed)</span>
+      </div>
+      <input id="thermoSlider" title="Thermodynamic Yield" type="range" min="6.6" max="95" step="0.1" value="85" class="w-full mb-5">
+
+      <label class="text-sm text-slate-600">Purification Capability</label>
+      <select id="purification" title="Purification Method" class="w-full mt-1 mb-5 px-3 py-2 border border-slate-300 rounded text-sm">
+        <option value="1">Standard HPLC</option>
+        <option value="0.8">Advanced Affinity</option>
+      </select>
+
+      <button id="calcBtn" class="w-full bg-blue-600 text-white py-2.5 rounded font-medium hover:bg-blue-700">
+        Simulate Folding Run
+      </button>
+
+      <div class="mt-4 pt-4 border-t text-xs text-slate-500">
+        Simulating directed oxidative folding
+      </div>
+    </div>
+
+    <!-- CENTER -->
+    <div class="col-span-6 bg-white rounded-lg border border-slate-200 p-5">
+      <div class="flex justify-between items-center mb-3">
+        <h2 class="font-semibold">Folding Yield vs. Cost Projection</h2>
+        <span class="text-xs text-slate-500">Production Scale: 1 Kilogram</span>
+      </div>
+      
+      <div class="w-full h-[300px] mb-6">
+        <canvas id="costChart"></canvas>
+      </div>
+
+      <div class="p-4 bg-slate-50 border border-slate-200 rounded-lg">
+        <h3 class="text-sm font-semibold mb-2">The 1-in-15 Problem</h3>
+        <p class="text-sm text-slate-600 mb-2">
+          Peptides with 6 cysteines can form <strong>15 different disulfide bond combinations</strong> (isomers). Usually, only <strong>one</strong> is the biologically active "cystine knot". 
+        </p>
+        <p class="text-sm text-slate-600">
+          Unoptimized sequences fold randomly, capping yield at ~6.6%, driving raw synthesis costs to $80,000+/gram. Our <span class="font-mono text-xs bg-slate-200 px-1 rounded">dWJS</span> optimized sequences thermodynamically favor the native knot, pushing yield above 80% and dropping costs exponentially.
+        </p>
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="col-span-3 bg-white rounded-lg border border-slate-200 p-5 h-fit">
+      <h2 class="font-semibold mb-4">Production Economics</h2>
+
+      <div class="mb-5 p-4 bg-blue-50 border border-blue-100 rounded text-center">
+        <div class="text-sm text-slate-600 mb-1">Target Folding Yield</div>
+        <div id="yieldDisplay" class="text-3xl font-bold text-blue-600">85.0%</div>
+      </div>
+
+      <div class="space-y-4 mb-6">
+        <div>
+          <div class="flex justify-between text-sm mb-1">
+            <span class="text-slate-500">Raw Synthesis Cost</span>
+            <span class="font-medium">$3,500 / g</span>
+          </div>
+          <div class="w-full bg-slate-100 rounded h-1.5"><div class="bg-slate-300 h-1.5 rounded w-full"></div></div>
+        </div>
+
+        <div>
+          <div class="flex justify-between text-sm mb-1">
+            <span class="text-slate-500">Yield Adjusted Cost</span>
+            <span id="adjustedCost" class="font-medium text-red-500">$4,117 / g</span>
+          </div>
+        </div>
+
+        <div class="pt-3 border-t">
+          <div class="flex justify-between items-end">
+            <span class="text-sm font-semibold">Final Price <br/><span class="text-xs text-slate-400">per typical 50mg pill</span></span>
+            <span id="pillCost" class="text-2xl font-bold text-slate-800">$0.20</span>
+          </div>
+        </div>
+      </div>
+
+      <button id="dlRep" class="w-full py-2 border border-slate-300 shadow-sm rounded text-sm text-slate-700 font-medium hover:bg-slate-50 transition">
+        Export Economics Report
+      </button>
+    </div>
+  </div>
+
+  <script>
+    const ctx = document.getElementById('costChart').getContext('2d');
+    let chart;
+
+    function initChart() {
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: ['6.6% (Random)', '20%', '40%', '60%', '80%', '95% (Optimized)'],
+          datasets: [{
+            label: 'Cost per Gram ($)',
+            data: [80000, 20000, 9000, 5500, 4200, 3600],
+            borderColor: '#2563eb',
+            backgroundColor: 'rgba(37, 99, 235, 0.1)',
+            borderWidth: 3,
+            fill: true,
+            tension: 0.4,
+            pointBackgroundColor: '#fff',
+            pointBorderColor: '#2563eb',
+            pointRadius: 5
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { callback: value => '$' + value.toLocaleString() }
+            }
+          }
+        }
+      });
+    }
+
+    initChart();
+
+    const thermoSlider = document.getElementById('thermoSlider');
+    const yieldDisplay = document.getElementById('yieldDisplay');
+    const adjustedCostDisplay = document.getElementById('adjustedCost');
+    const pillCostDisplay = document.getElementById('pillCost');
+    const sequenceType = document.getElementById('sequenceType');
+    const purification = document.getElementById('purification');
+
+    function updateEconomics() {
+      const yieldPct = parseFloat(thermoSlider.value);
+      const purificationFactor = parseFloat(purification.value);
+      
+      yieldDisplay.textContent = yieldPct.toFixed(1) + '%';
+
+      // Base chemical synthesis cost is fixed ~ $3,500 per gram of CRUDE linear peptide
+      const baseCost = 3500 * purificationFactor;
+      
+      // The folding yield applies a massive penalty if most of the batch misfolds and is discarded
+      // Cost = Base / (Yield / 100)
+      const exactCost = baseCost / (yieldPct / 100);
+      
+      adjustedCostDisplay.textContent = '$' + exactCost.toLocaleString(undefined, {maximumFractionDigits: 0}) + ' / g';
+      
+      // Calculate pill cost (50mg = 0.05g)
+      const pillCost = exactCost * 0.05;
+      pillCostDisplay.textContent = '$' + pillCost.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2});
+      
+      // Highlight coloring
+      if(exactCost > 20000) {
+        adjustedCostDisplay.className = "font-medium text-red-600";
+      } else if (exactCost > 8000) {
+        adjustedCostDisplay.className = "font-medium text-amber-500";
+      } else {
+        adjustedCostDisplay.className = "font-medium text-green-600";
+      }
+    }
+
+    thermoSlider.addEventListener('input', updateEconomics);
+    purification.addEventListener('change', updateEconomics);
+
+    sequenceType.addEventListener('change', (e) => {
+      if(e.target.value === 'native') {
+        thermoSlider.value = 45; // Native folds okay, but not perfectly in industrial vats
+      } else if (e.target.value === 'random') {
+        thermoSlider.value = 6.6; // 1 in 15 chance
+      } else {
+        thermoSlider.value = 85;  // Optimized
+      }
+      updateEconomics();
+    });
+
+    document.getElementById('calcBtn').addEventListener('click', () => {
+      const btn = document.getElementById('calcBtn');
+      btn.textContent = "Simulating...";
+      btn.classList.add('opacity-75');
+      setTimeout(() => {
+        updateEconomics();
+        btn.textContent = "Simulate Folding Run";
+        btn.classList.remove('opacity-75');
+      }, 500);
+    });
+
+    document.getElementById('dlRep').addEventListener('click', () => {
+      const content = `Economics Production Projection\nTarget Yield: ${yieldDisplay.innerText}\nCost per gram: ${adjustedCostDisplay.innerText}\nCost per pill: ${pillCostDisplay.innerText}`;
+      const blob = new Blob([content], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'plant2pill_economics_report.txt'; a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    updateEconomics();
+  </script>
+</body>
+</html>

@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Plant2Pill — Walk-Jump Design Server</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+  <script src="https://3Dmol.csb.pitt.edu/build/3Dmol-min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=IBM+Plex+Mono&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; background: #f8fafc; }
+   .mono { font-family: 'IBM Plex Mono', monospace; }
+  </style>
+</head>
+<body class="text-slate-800">
+  <!-- Nav -->
+  <nav class="bg-white border-b border-slate-200 px-6 py-3 flex items-center justify-between">
+    <div class="flex items-center gap-2">
+      <div class="w-8 h-8 bg-blue-600 rounded flex items-center justify-center text-white font-bold">P2</div>
+      <span class="font-semibold text-lg">Plant2Pill</span>
+      <span class="text-xs bg-slate-100 px-2 py-0.5 rounded ml-2">beta</span>
+    </div>
+    <div class="flex gap-6 text-sm">
+      <a href="index.html" class="text-blue-600 font-medium">Design</a>
+      <a href="murburn-analysis.html" class="text-slate-600 hover:text-slate-900">Efficacy (Murburn)</a>
+      <a href="cyclotide-manufacturability.html" class="text-slate-600 hover:text-slate-900">Cost (Mfg)</a>
+      <a href="#" class="text-slate-600 hover:text-slate-900">GitHub</a>
+    </div>
+  </nav>
+
+  <div class="max-w-[1400px] mx-auto p-6 grid grid-cols-12 gap-6">
+    <!-- LEFT -->
+    <div class="col-span-3 bg-white rounded-lg border border-slate-200 p-5 h-fit">
+      <h2 class="font-semibold mb-4">Job Parameters</h2>
+
+      <label class="text-sm text-slate-600">Scaffold</label>
+      <select id="scaffold" title="Scaffold" class="w-full mt-1 mb-4 px-3 py-2 border border-slate-300 rounded text-sm">
+        <option>Kalata B1 (cyclotide)</option>
+        <option>MCoTI-II</option>
+      </select>
+
+      <label class="text-sm text-slate-600">Design Goal</label>
+      <select id="goal" title="Design Goal" class="w-full mt-1 mb-4 px-3 py-2 border border-slate-300 rounded text-sm">
+        <option>Oral stability</option>
+        <option>Wound healing</option>
+        <option>Antimicrobial</option>
+      </select>
+
+      <label class="text-sm text-slate-600">Mutation rate: <span id="mutVal">0.2</span></label>
+      <input id="mutRate" title="Mutation Rate" type="range" min="0.1" max="0.5" step="0.1" value="0.2" class="w-full mb-4">
+
+      <label class="text-sm text-slate-600">Cycles</label>
+      <input id="cycles" title="Cycles" type="number" value="5" class="w-full mt-1 mb-5 px-3 py-2 border border-slate-300 rounded text-sm">
+
+      <button id="runBtn" class="w-full bg-blue-600 text-white py-2.5 rounded font-medium hover:bg-blue-700">
+        Run Walk-Jump Design
+      </button>
+
+      <div class="mt-4 pt-4 border-t text-xs text-slate-500">
+        Job ID: <span class="mono">P2P-2026-0427</span>
+      </div>
+    </div>
+
+    <!-- CENTER -->
+    <div class="col-span-6 bg-white rounded-lg border border-slate-200 p-5">
+      <div class="flex justify-between items-center mb-3">
+        <h2 class="font-semibold">3D Structure Viewer</h2>
+        <span class="text-xs text-slate-500">Kalata B1 - Cystine Knot</span>
+      </div>
+      <div id="viewer" class="w-full h-[460px] bg-slate-50 rounded border border-slate-200 relative"></div>
+
+      <div class="mt-4 p-3 bg-slate-50 rounded font-mono text-sm">
+        <span class="text-slate-500 block mb-1">Optimized Sequence:</span>
+        <span id="seq" class="text-blue-700 font-bold text-base block mb-3">GLPVCGETCVGGTCNTPGCTCSWPVCTRN</span>
+        <div id="variantsContainer" class="hidden border-t border-slate-200 pt-2">
+          <span class="text-slate-400 text-xs">Latent Space Variants (Walk):</span>
+          <div id="variantList" class="text-xs text-slate-500 mt-1 space-y-1"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT -->
+    <div class="col-span-3 bg-white rounded-lg border border-slate-200 p-5 h-fit">
+      <div class="flex items-center gap-2 mb-4">
+        <div id="statusDot" class="w-2 h-2 bg-slate-400 rounded-full"></div>
+        <h2 class="font-semibold">Job Status</h2>
+        <span id="status" class="text-sm text-slate-600 ml-auto">Idle</span>
+      </div>
+
+      <div class="mb-5">
+        <div class="text-sm text-slate-600">Best DCS Score</div>
+        <div id="dcs" class="text-3xl font-semibold text-blue-600">84.2</div>
+        <div class="text-xs text-slate-500">Manufacturability</div>
+      </div>
+
+      <div class="mb-4">
+        <div class="text-sm font-medium mb-2">Agent Log</div>
+        <div id="log" class="h-[200px] overflow-y-auto bg-slate-900 text-green-400 p-3 rounded text-xs mono">
+          [00:00] Ready. Awaiting job...
+        </div>
+      </div>
+
+      <button id="dlPdb" disabled class="w-full mb-2 py-2 border border-slate-300 rounded text-sm text-slate-400 cursor-not-allowed">
+        Download PDB
+      </button>
+      <button id="dlRep" disabled class="w-full py-2 border border-slate-300 rounded text-sm text-slate-400 cursor-not-allowed">
+        Download Report
+      </button>
+    </div>
+
+    <!-- CHAT -->
+    <div class="col-span-12 bg-white rounded-lg border border-slate-200 p-4">
+      <div class="flex gap-3">
+        <input id="chatIn" placeholder="Ask the design agent... (e.g., 'design peptide for gut stability')"
+               class="flex-1 px-3 py-2 border border-slate-300 rounded text-sm">
+        <button id="chatBtn" class="px-4 py-2 bg-slate-900 text-white rounded text-sm">Send</button>
+      </div>
+      <div id="chatOut" class="mt-3 text-sm text-slate-600 hidden"></div>
+    </div>
+  </div>
+
+<script>
+// --- 3D Viewer ---
+let currentSequence = "GLPVCGETCVGGTCNTPGCTCSWPVCTRN"; 
+let viewer;
+
+window.addEventListener('DOMContentLoaded', () => {
+  viewer = $3Dmol.createViewer("viewer", {
+    defaultcolors: $3Dmol.rasmolElementColors
+  });
+  viewer.setBackgroundColor(0xf8fafc);
+  // Show default sequence initially
+  document.getElementById('seq').innerHTML = currentSequence;
+  loadSequencePDB(currentSequence);
+});
+
+// We need loadSequencePDB to be globally accessible so inline onclick handlers work
+window.loadSequencePDB = async function(seq) {
+  try {
+    document.getElementById('viewer').style.opacity = '0.5';
+    // Using ESMFold Atlas API to get a real predicted 3D structure for the given sequence dynamically
+    const response = await fetch('https://api.esmatlas.com/foldSequence/v1/pdb/', {
+      method: 'POST',
+      body: seq
+    });
+    if (!response.ok) throw new Error('Network error');
+    const pdbData = await response.text();
+    
+    viewer.clear();
+    viewer.addModel(pdbData, "pdb");
+    
+    // Visualize as a cartoon spectrum, highlighting cysteine knots in ball & stick 
+    viewer.setStyle({}, {cartoon: {color: 'spectrum'}});
+    
+    // Try to highlight mutated residues differently if they differ from currentSequence
+    // We parse the sequence strings to find mismatches
+    for (let i = 0; i < seq.length; i++) {
+        if (seq[i] !== currentSequence[i] && seq[i] !== 'C') {
+            viewer.setStyle({resi: i + 1}, {
+                cartoon: {color: 'magenta'},
+                stick: {radius: 0.15, colorscheme: 'lightgreyCarbon'}
+            });
+        }
+    }
+
+    viewer.setStyle({resn: 'CYS'}, {
+      cartoon: {color: 'spectrum'}, 
+      stick: {colorscheme: 'yellowCarbon', radius: 0.2}, 
+      sphere: {colorscheme: 'yellowCarbon', radius: 0.5}
+    });
+
+    viewer.zoomTo();
+    viewer.render();
+    document.getElementById('viewer').style.opacity = '1.0';
+    
+    // Store data so we can download it later
+    window.lastPDBData = pdbData;
+  } catch (error) {
+    console.error("ESMFold API error:", error);
+    addLog(`Error fetching structure: ${error.message}. Using fallback...`);
+    
+    // DEMO FALLBACK: Load a mock 3D backbone if API fails
+    if (!window.fallbackPDB) {
+      window.fallbackPDB = `HEADER    MOCK FALLBACK PDB
+ATOM      1  N   GLY A   1      -0.000   0.000   0.000  1.00  0.00           N  
+ATOM      2  CA  GLY A   1       1.458   0.000   0.000  1.00  0.00           C  
+ATOM      3  C   GLY A   1       2.009   1.424   0.000  1.00  0.00           C  
+ATOM      4  O   GLY A   1       1.328   2.435   0.000  1.00  0.00           O  
+ATOM      5  CB  GLY A   1       2.000  -0.700  -1.200  1.00  0.00           C  
+END`;
+    }
+    
+    viewer.clear();
+    viewer.addModel(window.lastPDBData || window.fallbackPDB, "pdb");
+    viewer.setStyle({}, {cartoon: {color: 'spectrum', ribbon:true}});
+    viewer.zoomTo();
+    viewer.render();
+    
+    document.getElementById('viewer').style.opacity = '1.0';
+  }
+}
+
+// --- Agent ---
+const log = document.getElementById('log');
+const dcsEl = document.getElementById('dcs');
+const status = document.getElementById('status');
+const dot = document.getElementById('statusDot');
+
+function addLog(t){
+  const timeStr = new Date().toLocaleTimeString().slice(0,8);
+  log.innerHTML += `\n[${timeStr}] ${t}`;
+  log.scrollTop = log.scrollHeight;
+}
+
+let running = false;
+const AA_PROPS = {
+  A:{hyd:1.8,charge:0}, R:{hyd:-4.5,charge:1}, N:{hyd:-3.5,charge:0}, D:{hyd:-3.5,charge:-1},
+  C:{hyd:2.5,charge:0}, E:{hyd:-3.5,charge:-1}, Q:{hyd:-3.5,charge:0}, G:{hyd:-0.4,charge:0},
+  H:{hyd:-3.2,charge:0.5}, I:{hyd:4.5,charge:0}, L:{hyd:3.8,charge:0}, K:{hyd:-3.9,charge:1},
+  M:{hyd:1.9,charge:0}, F:{hyd:2.8,charge:0}, P:{hyd:-1.6,charge:0}, S:{hyd:-0.8,charge:0},
+  T:{hyd:-0.7,charge:0}, W:{hyd:-0.9,charge:0}, Y:{hyd:-1.3,charge:0}, V:{hyd:4.2,charge:0}
+};
+const AA_KEYS = Object.keys(AA_PROPS);
+
+function calculateDCS(seq) {
+  let totalHyd = 0, totalCharge = 0;
+  for(let i=0; i<seq.length; i++) {
+      if(seq[i] === 'C') continue; // exclude knot from variables
+      const prop = AA_PROPS[seq[i]];
+      if(prop) { totalHyd += prop.hyd; totalCharge += prop.charge; }
+  }
+  let score = 100 - Math.abs(totalHyd - 5.0)*2 - Math.abs(totalCharge)*15;
+  return Math.max(0, Math.min(100, score + (Math.random()*4 - 2)));
+}
+
+function mutateSequence(seq, rate) {
+  let newSeq = "";
+  for(let i=0; i<seq.length; i++) {
+      if(seq[i] === 'C') { newSeq += 'C'; }
+      else if(Math.random() < rate) { newSeq += AA_KEYS[Math.floor(Math.random() * AA_KEYS.length)]; }
+      else { newSeq += seq[i]; }
+  }
+  return newSeq;
+}
+
+document.getElementById('runBtn').onclick = async () => {
+  if(running) return;
+  running = true;
+  status.textContent = 'Running';
+  dot.className = 'w-2 h-2 bg-green-500 rounded-full animate-pulse';
+  log.innerHTML = '[00:00] Job queued';
+
+  const cycles = +document.getElementById('cycles').value;
+  const mutRate = +document.getElementById('mutRate').value;
+  let bestSequence = currentSequence;
+  let bestScore = calculateDCS(bestSequence);
+
+  for(let i=1;i<=cycles;i++){
+    addLog(`Starting Walk-Jump cycle ${i}...`);
+    await new Promise(r=>setTimeout(r,600));
+    
+    // Generate Mutants (Walk)
+    const variants = [];
+    for(let v=0; v<10; v++) { variants.push(mutateSequence(bestSequence, mutRate)); }
+    addLog(`Generated 10 latent variants (noise=${mutRate})`);
+    
+    document.getElementById('variantsContainer').classList.remove('hidden');
+    
+    // Create clickable variant badges that highlight mutations and trigger 3D update
+    document.getElementById('variantList').innerHTML = variants.slice(0,4).map(v => {
+      let displayHtml = '';
+      for (let idx = 0; idx < v.length; idx++) {
+        if (v[idx] !== currentSequence[idx] && v[idx] !== 'C') {
+          displayHtml += `<span class="bg-yellow-200 text-yellow-800 font-bold px-0.5 rounded">${v[idx]}</span>`;
+        } else {
+          displayHtml += v[idx];
+        }
+      }
+      return `<button onclick="loadSequencePDB('${v}')" class="w-full text-left flex justify-between items-center bg-white hover:bg-blue-50 p-1.5 rounded border border-slate-200 transition-colors cursor-pointer">
+        <span class="truncate font-mono">${displayHtml}</span>
+        <span class="text-blue-500 text-[10px]">View 3D</span>
+      </button>`;
+    }).join('');
+    
+    await new Promise(r=>setTimeout(r,400));
+    
+    // Score & Select (Jump / dEBM simulation)
+    variants.forEach(v => {
+        let s = calculateDCS(v);
+        if (s > bestScore) { bestScore = s; bestSequence = v; }
+    });
+    
+    document.getElementById('seq').innerHTML = bestSequence.split('').map((char, idx) => {
+        if (char !== currentSequence[idx] && char !== 'C') return `<span class="bg-yellow-200 text-yellow-800 font-bold px-0.5 rounded">${char}</span>`;
+        return char;
+    }).join('');
+    
+    dcsEl.textContent = bestScore.toFixed(1);
+    addLog(`Best DCS: ${bestScore.toFixed(1)}`);
+    
+    // Load the winning variant structure into the viewer for this cycle
+    status.textContent = `Folding cycle ${i} variant...`;
+    await loadSequencePDB(bestSequence);
+  }
+
+  addLog('✓ Design complete');
+  status.textContent = 'Complete';
+  dot.className = 'w-2 h-2 bg-blue-600 rounded-full';
+  document.getElementById('dlPdb').disabled = false;
+  document.getElementById('dlPdb').className = 'w-full mb-2 py-2 border border-blue-600 text-blue-600 rounded text-sm hover:bg-blue-50';
+  document.getElementById('dlRep').disabled = false;
+  document.getElementById('dlRep').className = 'w-full py-2 border border-blue-600 text-blue-600 rounded text-sm hover:bg-blue-50';
+  running = false;
+};
+
+// Downloads
+function downloadMockFile(filename, content) {
+  const blob = new Blob([content], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+document.getElementById('dlPdb').onclick = () => {
+  if (window.lastPDBData) {
+    downloadMockFile('optimized_cyclotide.pdb', window.lastPDBData);
+  } else {
+    alert("No PDB data available yet.");
+  }
+};
+
+document.getElementById('dlRep').onclick = () => {
+  downloadMockFile('p2p_design_report.txt', `Plant2Pill Job: P2P-2026-0427\nGoal: ${document.getElementById('goal').options[document.getElementById('goal').selectedIndex].text}\nScore: ${document.getElementById('dcs').innerText}\nSequence: ${document.getElementById('seq').innerText}`);
+};
+
+// mutation slider
+document.getElementById('mutRate').oninput = e => {
+  document.getElementById('mutVal').textContent = e.target.value;
+};
+
+// chat
+document.getElementById('chatBtn').onclick = () => {
+  const input = document.getElementById('chatIn').value.toLowerCase();
+  const out = document.getElementById('chatOut');
+  out.classList.remove('hidden');
+
+  if(input.includes('design')){
+    const goal = document.getElementById('goal').value;
+    out.innerHTML = `<span class="text-blue-600">Agent:</span> Starting Walk-Jump design optimizing for ${goal.toLowerCase()}. Running cycles...`;
+    document.getElementById('runBtn').click();
+  } else if(input.includes('show') || input.includes('structure')){
+    out.innerHTML = '<span class="text-blue-600">Agent:</span> Rendering cystine knot scaffold. Gold spheres represent the 6 crucial Cysteine nodes that grant the peptide its oral stability.';
+  } else if(input.includes('explain')){
+    out.innerHTML = '<span class="text-blue-600">Agent:</span> dWJS (Discrete Walk, Continuous Jump) first embeds the peptide in a continuous latent space to diffuse (Walk), then uses a discrete Energy-Based Model (dEBM) to score stability, jumping back to optimal sequences.';
+  } else {
+    out.innerHTML = '<span class="text-blue-600">Agent:</span> Try "design peptide", "show structure", or "explain walk-jump"';
+  }
+  document.getElementById('chatIn').value = '';
+};
+</script>
+</body>
+</html>
