@@ -175,16 +175,8 @@
       el.innerHTML += `<br><span class="${isError?'text-red-400':''}"><span class="text-slate-500">[${time}]</span> ${msg}</span>`;
       el.scrollTop = el.scrollHeight;
     }
-timeStep = 0;
-      
-      // Reset chart
-      chart.data.labels = [0];
-      chart.data.datasets[0].data = [100];
-      chart.data.datasets[0].borderColor = '#10b981';
-      chart.data.datasets[0].backgroundColor = 'rgba(16, 185, 129, 0.2)';
-      chart.update();
 
-      
+
     document.getElementById('drosIntensity').oninput = e => {
       const val = e.target.value;
       document.getElementById('drosVal').textContent = val == 1 ? "Low" : val == 2 ? "Medium" : "Severe";
@@ -194,6 +186,15 @@ timeStep = 0;
       if(isSimulating) return;
       isSimulating = true;
       integrity = 100;
+      timeStep = 0;
+      
+      // Reset chart
+      chart.data.labels = [0];
+      chart.data.datasets[0].data = [100];
+      chart.data.datasets[0].borderColor = '#10b981';
+      chart.data.datasets[0].backgroundColor = 'rgba(16, 185, 129, 0.2)';
+      chart.update();
+
       updateUI();
       
       document.getElementById('simBadge').classList.remove('hidden');
@@ -229,14 +230,15 @@ timeStep = 0;
       document.getElementById('scoreBio').textContent = Math.max(0, bioDrop.toFixed(0)) + "%";
       document.getElementById('barBio').style.width = Math.max(0, bioDrop) + "%";
 
-      if(integrity < 50) {
+      if(integrity >= 50) {
+        document.getElementById('barInt').className = "bg-green-600 h-1.5 rounded-full";
+        document.getElementById('scoreInt').className = "text-xl font-bold text-green-600";
+      } else if(integrity < 50 && integrity >= 20) {
         document.getElementById('barInt').className = "bg-orange-500 h-1.5 rounded-full";
         document.getElementById('scoreInt').className = "text-xl font-bold text-orange-500";
-      }
-      if(integrity < 20) {
+      } else if(integrity < 20) {
         document.getElementById('barInt').className = "bg-red-600 h-1.5 rounded-full";
         document.getElementById('scoreInt').className = "text-xl font-bold text-red-600";
-      let activeShields = []; // NEW
       }
     }
 
@@ -246,6 +248,7 @@ timeStep = 0;
       viewer.removeAllShapes(); // clear old DROS spheres
       let activeCount = 0;
       let hitOccurred = false;
+      let activeShields = [];
 
       drosParticles.forEach(p => {
         if(!p.active) return;
@@ -260,8 +263,6 @@ timeStep = 0;
         if(dist < 8.5) { // Collision radius
           p.active = false;
           hitOccurred = true;
-          // Linear peptides take massive damage quickly compared to Cyclotides
-            activeShields.push({x: p.x, y: p.y, z: p.z});
           const dmg = isLinear ? (Math.random() * 8.0 + 4.0) : (Math.random() * 1.5 + 0.5);
           integrity -= dmg;
           
@@ -272,6 +273,7 @@ timeStep = 0;
           const isCys = sequence[targetResi-1] === 'C';
           if(!isLinear && isCys && Math.random() > 0.4) {
             logMsg(`Knot deflected DROS attack at CYS-${targetResi}`);
+            activeShields.push({x: p.x, y: p.y, z: p.z});
           } else {
              if (isLinear && Math.random() > 0.5) logMsg(`Cleavage detected on linear chain at ${sequence[targetResi-1]}-${targetResi}!`, true);
              // Severe oxidation: turning the residue burnt/red
@@ -284,6 +286,8 @@ timeStep = 0;
         } else {
           // Draw the DROS radical as a glowing red/orange sphere
           viewer.addSphere({center: {x: p.x, y: p.y, z: p.z}, radius: 0.8, color: 'red', alpha: 0.7});
+        }
+      });
 
       // Render Murburn deflector shields
       activeShields.forEach(s => {
@@ -310,8 +314,6 @@ timeStep = 0;
         chart.update();
       }
 
-      
-      if(hitOccurred) updateUI();
       viewer.render();
 
       if(activeCount > 0 && integrity > 0) {
