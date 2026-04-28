@@ -384,24 +384,98 @@ document.getElementById('mutRate').oninput = e => {
 };
 
 // chat
-document.getElementById('chatBtn').onclick = () => {
-  const input = document.getElementById('chatIn').value.toLowerCase();
-  const out = document.getElementById('chatOut');
-  out.classList.remove('hidden');
+// --- Mock Agentic UI (Chat-to-UI Controller) ---
+const chatIn = document.getElementById('chatIn');
+const chatBtn = document.getElementById('chatBtn');
+const chatOut = document.getElementById('chatOut');
 
-  if(input.includes('design')){
-    const goal = document.getElementById('goal').value;
-    out.innerHTML = `<span class="text-blue-600">Agent:</span> Starting Walk-Jump design optimizing for ${goal.toLowerCase()}. Running cycles...`;
-    document.getElementById('runBtn').click();
-  } else if(input.includes('show') || input.includes('structure')){
-    out.innerHTML = '<span class="text-blue-600">Agent:</span> Rendering cystine knot scaffold. Gold spheres represent the 6 crucial Cysteine nodes that grant the peptide its oral stability.';
-  } else if(input.includes('explain')){
-    out.innerHTML = '<span class="text-blue-600">Agent:</span> dWJS (Discrete Walk, Continuous Jump) first embeds the peptide in a continuous latent space to diffuse (Walk), then uses a discrete Energy-Based Model (dEBM) to score stability, jumping back to optimal sequences.';
-  } else {
-    out.innerHTML = '<span class="text-blue-600">Agent:</span> Try "design peptide", "show structure", or "explain walk-jump"';
+chatBtn.onclick = async () => {
+  const query = chatIn.value.toLowerCase();
+  const out = chatOut;
+  if (!query.trim()) return;
+  
+  chatIn.disabled = true;
+  chatBtn.disabled = true;
+  
+  // Reveal chat out box
+  out.classList.remove('hidden');
+  out.innerHTML = `<span class="text-blue-600 font-semibold flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-blue-500 animate-ping"></span> Agent interpreting command...</span>`;
+  
+  // Simulate API delay (fake LLM processing time)
+  await new Promise(r => setTimeout(r, 800));
+  
+  let responseText = "I've configured the parameters. ";
+  let autoRun = false;
+  
+  // 1. Goal Detection
+  if (query.includes('wound') || query.includes('healing')) {
+    document.getElementById('goal').value = 'Wound healing';
+    responseText += "Goal set to Wound Healing. ";
+  } else if (query.includes('gut') || query.includes('oral') || query.includes('stability')) {
+     document.getElementById('goal').value = 'Oral stability';
+     responseText += "Goal set to Oral stability. ";
+  } else if (query.includes('micro') || query.includes('antimicrobial')) {
+     document.getElementById('goal').value = 'Antimicrobial';
+     responseText += "Goal set to Antimicrobial. ";
   }
-  document.getElementById('chatIn').value = '';
+
+  // 2. Mutation Rate Detection
+  if (query.includes('aggressive') || query.includes('high noise') || query.includes('max')) {
+    document.getElementById('mutRate').value = "0.4";
+    document.getElementById('mutVal').textContent = "0.4";
+    responseText += "Increased mutation noise to 0.4. ";
+  } else if (query.includes('gentle') || query.includes('low noise')) {
+    document.getElementById('mutRate').value = "0.1";
+    document.getElementById('mutVal').textContent = "0.1";
+    responseText += "Decreased mutation noise to 0.1. ";
+  }
+
+  // 3. Cycle Detection
+  const cycleMatch = query.match(/(\d+)\s*cycle/);
+  if (cycleMatch) {
+     document.getElementById('cycles').value = cycleMatch[1];
+     responseText += `Set to ${cycleMatch[1]} cycles. `;
+  }
+
+  // 4. Pre-defined scientific explanations
+  if (query.includes('explain') || query.includes('dwjs') || query.includes('how')) {
+    responseText = "dWJS (Discrete Walk, Continuous Jump) first embeds the peptide in a continuous latent space to diffuse (Walk), then uses a discrete Energy-Based Model (dEBM) to score stability, jumping back to optimal sequences.";
+  } else if (query.includes('show') || query.includes('structure')) {
+    responseText = "Rendering cystine knot scaffold. Gold spheres represent the 6 crucial Cysteine nodes granting oral stability.";
+  } else if (query.includes('run') || query.includes('execute') || query.includes('design') || query.includes('start') || query.includes('go')) {
+    autoRun = true;
+    responseText += "Starting Walk-Jump process now.";
+  } else if (responseText === "I've configured the parameters. ") {
+    responseText = 'Try "configure aggressive 10 cycle run for wound healing" or "explain walk-jump"';
+  }
+  
+  out.innerHTML = `<span class="text-blue-600 font-semibold flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg> Agent:</span> <span>${responseText}</span>`;
+  
+  // Highlight the UI changes by briefly flashing the controls
+  ['goal', 'mutRate', 'cycles'].forEach(id => {
+    const el = document.getElementById(id);
+    el.classList.add('ring-2', 'ring-blue-400');
+    setTimeout(() => el.classList.remove('ring-2', 'ring-blue-400'), 1000);
+  });
+  
+  // Re-enable inputs
+  chatIn.disabled = false;
+  chatBtn.disabled = false;
+  chatIn.value = ''; // clear input
+
+  // Add a slight delay for dramatic effect before running
+  if (autoRun) {
+    await new Promise(r => setTimeout(r, 800));
+    document.getElementById('runBtn').click();
+  }
 };
+
+// Also support "Enter" key
+chatIn.addEventListener('keypress', function (e) {
+  if (e.key === 'Enter') {
+    chatBtn.click();
+  }
+});
 </script>
 </body>
 </html>
