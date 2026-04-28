@@ -43,6 +43,10 @@
           <option value="linear">Insulin-like (Linear)</option>
         </select>
 
+        <div id="optimizedAlert" class="hidden mb-4 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-700">
+          ✨ Using your Walk-Jump optimized sequence from Design module!
+        </div>
+
         <label class="text-sm text-slate-600">DROS Concentration: <span id="drosVal">Medium</span></label>
         <input id="drosIntensity" title="DROS Concentration" type="range" min="1" max="3" step="1" value="2" class="w-full mb-4">
 
@@ -112,7 +116,22 @@
       cyclotide: "GLPVCGETCVGGTCNTPGCTCSWPVCTRN", // Kalata B1
       linear: "GIVEQCCTSICSLYQLENYCN" // Insulin A chain (more vulnerable)
     };
-    let sequence = sequences.cyclotide;
+    
+    // Check if we have an optimized sequence from the Walk-Jump design
+    const optimizedSeq = localStorage.getItem('optimizedSequence');
+    if (optimizedSeq) {
+      sequences.optimized = optimizedSeq;
+      // Add it to the dropdown options
+      const optElement = document.createElement('option');
+      optElement.value = 'optimized';
+      optElement.text = 'Optimized Kalata (Walk-Jump)';
+      document.getElementById('peptideType').appendChild(optElement);
+      // Auto select it by default to showcase the seamless flow!
+      document.getElementById('peptideType').value = 'optimized';
+      document.getElementById('optimizedAlert').classList.remove('hidden');
+    }
+
+    let sequence = sequences[document.getElementById('peptideType').value] || sequences.cyclotide;
     let isLinear = false;
     let isSimulating = false;
     let drosParticles = [];
@@ -144,7 +163,14 @@
       viewer.clear();
       integrity = 100;
       updateUI();
-      logMsg(`Switched to ${e.target.value} peptide scaffold.`);
+      
+      if (e.target.value === 'optimized') {
+        document.getElementById('optimizedAlert').classList.remove('hidden');
+      } else {
+        document.getElementById('optimizedAlert').classList.add('hidden');
+      }
+      
+      logMsg(`Switched to ${e.target.value === 'optimized' ? 'Optimized' : e.target.value} peptide scaffold.`);
       loadPeptide();
     };
 

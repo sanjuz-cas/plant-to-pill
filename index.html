@@ -301,7 +301,7 @@ document.getElementById('runBtn').onclick = async () => {
     
     // Aha! Moment: Confetti and glow effect if DCS > 90
     if (bestScore > 90) {
-      addLog(`✨ Incredible DCS Score Reached! (${bestScore.toFixed(1)})`);
+      addLog(` Incredible DCS Score Reached! (${bestScore.toFixed(1)})`);
       dcsEl.classList.add('text-green-500', 'animate-bounce');
       setTimeout(() => dcsEl.classList.remove('animate-bounce'), 1000);
       
@@ -337,6 +337,13 @@ document.getElementById('runBtn').onclick = async () => {
     
     // Load the winning variant structure into the viewer for this cycle
     status.textContent = `Folding cycle ${i} variant...`;
+    
+    // Save to localStorage for efficacy page!
+    if (i === cycles) {
+      localStorage.setItem('optimizedSequence', bestSequence);
+      addLog('Saved optimized sequence to memory for Efficacy analysis.');
+    }
+    
     await loadSequencePDB(bestSequence);
   }
 
