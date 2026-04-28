@@ -78,6 +78,12 @@
           <div id="barBio" class="bg-blue-600 h-1.5 rounded-full w-[84%]"></div>
         </div>
       </div>
+
+      <!-- NEW KINETICS CHART -->
+      <div class="bg-white rounded-lg border border-slate-200 p-4 mt-6">
+        <h2 class="font-semibold mb-2 text-sm text-slate-800">Degradation Kinetics</h2>
+        <canvas id="integrityChart" height="180"></canvas>
+      </div>
     </div>
 
     <!-- CENTER: 3D Viewer -->
@@ -100,6 +106,8 @@
 
   <script>
     let viewer;
+    let chart;
+    let timeStep = 0;
     const sequences = {
       cyclotide: "GLPVCGETCVGGTCNTPGCTCSWPVCTRN", // Kalata B1
       linear: "GIVEQCCTSICSLYQLENYCN" // Insulin A chain (more vulnerable)
@@ -119,6 +127,14 @@
     window.addEventListener('DOMContentLoaded', () => {
       viewer = $3Dmol.createViewer("viewer", { defaultcolors: $3Dmol.pascalElementColors });
       viewer.setBackgroundColor(0x0f172a); // dark slate 900 for cool contrast
+      
+      const ctx = document.getElementById('integrityChart').getContext('2d');
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: { labels: [0], datasets: [{ label: 'Integrity %', data: [100], borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.2)', borderWidth: 2, fill: true, tension: 0.3, pointRadius: 0 }] },
+        options: { responsive: true, scales: { y: { min: 0, max: 100 }, x: { display: false } }, plugins: { legend: { display: false } }, animation: false }
+      });
+
       loadPeptide();
     });
 
@@ -159,7 +175,16 @@
       el.innerHTML += `<br><span class="${isError?'text-red-400':''}"><span class="text-slate-500">[${time}]</span> ${msg}</span>`;
       el.scrollTop = el.scrollHeight;
     }
+timeStep = 0;
+      
+      // Reset chart
+      chart.data.labels = [0];
+      chart.data.datasets[0].data = [100];
+      chart.data.datasets[0].borderColor = '#10b981';
+      chart.data.datasets[0].backgroundColor = 'rgba(16, 185, 129, 0.2)';
+      chart.update();
 
+      
     document.getElementById('drosIntensity').oninput = e => {
       const val = e.target.value;
       document.getElementById('drosVal').textContent = val == 1 ? "Low" : val == 2 ? "Medium" : "Severe";
@@ -211,6 +236,7 @@
       if(integrity < 20) {
         document.getElementById('barInt').className = "bg-red-600 h-1.5 rounded-full";
         document.getElementById('scoreInt').className = "text-xl font-bold text-red-600";
+      let activeShields = []; // NEW
       }
     }
 
@@ -235,6 +261,7 @@
           p.active = false;
           hitOccurred = true;
           // Linear peptides take massive damage quickly compared to Cyclotides
+            activeShields.push({x: p.x, y: p.y, z: p.z});
           const dmg = isLinear ? (Math.random() * 8.0 + 4.0) : (Math.random() * 1.5 + 0.5);
           integrity -= dmg;
           
@@ -257,8 +284,32 @@
         } else {
           // Draw the DROS radical as a glowing red/orange sphere
           viewer.addSphere({center: {x: p.x, y: p.y, z: p.z}, radius: 0.8, color: 'red', alpha: 0.7});
-        }
+
+      // Render Murburn deflector shields
+      activeShields.forEach(s => {
+        viewer.addSphere({center: {x: s.x, y: s.y, z: s.z}, radius: 3.5, color: '#06b6d4', alpha: 0.5}); // Glow
+        viewer.addSphere({center: {x: s.x, y: s.y, z: s.z}, radius: 4.5, color: '#22d3ee', alpha: 0.2, wireframe: true}); // Ripple wireframe
       });
+      
+      if(hitOccurred) updateUI();
+      
+      // Update Chart Kinetics
+      timeStep++;
+      if (timeStep % 2 === 0) {
+        chart.data.labels.push(timeStep);
+        chart.data.datasets[0].data.push(Math.max(0, integrity));
+        // Change chart color as peptide degrades
+        if (integrity < 50 && chart.data.datasets[0].borderColor !== '#f97316') {
+          chart.data.datasets[0].borderColor = '#f97316';
+          chart.data.datasets[0].backgroundColor = 'rgba(249, 115, 22, 0.2)';
+        }
+        if (integrity < 20 && chart.data.datasets[0].borderColor !== '#dc2626') {
+          chart.data.datasets[0].borderColor = '#dc2626';
+          chart.data.datasets[0].backgroundColor = 'rgba(220, 38, 38, 0.2)';
+        }
+        chart.update();
+      }
+
       
       if(hitOccurred) updateUI();
       viewer.render();
