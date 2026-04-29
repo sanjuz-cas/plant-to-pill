@@ -128,20 +128,9 @@
 
     if (optimizedSeq) {
       sequences.optimized = optimizedSeq;
-      // Add it to the dropdown options
-      const optElement = document.createElement('option');
-      optElement.value = 'optimized';
-      optElement.text = 'Optimized Kalata (Walk-Jump)';
-      document.addEventListener('DOMContentLoaded', () => {
-        document.getElementById('peptideType').appendChild(optElement);
-        // Auto select it by default to showcase the seamless flow!
-        document.getElementById('peptideType').value = 'optimized';
-        document.getElementById('optimizedAlert').classList.remove('hidden');
-        document.getElementById('activeSequence').textContent = optimizedSeq;
-      });
     }
 
-    let sequence = sequences[document.getElementById('peptideType').value] || sequences.cyclotide;
+    let sequence = sequences.cyclotide; // Default init
     let isLinear = false;
     let isSimulating = false;
     let drosParticles = [];
@@ -163,6 +152,21 @@
         data: { labels: [0], datasets: [{ label: 'Integrity %', data: [100], borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.2)', borderWidth: 2, fill: true, tension: 0.3, pointRadius: 0 }] },
         options: { responsive: true, scales: { y: { min: 0, max: 100 }, x: { display: false } }, plugins: { legend: { display: false } }, animation: false }
       });
+
+      // Synchronously set up the dropdown and sequence BEFORE loading
+      const pepSelect = document.getElementById('peptideType');
+      if (optimizedSeq) {
+          const optElement = document.createElement('option');
+          optElement.value = 'optimized';
+          optElement.text = 'Optimized Kalata (Walk-Jump)';
+          pepSelect.appendChild(optElement);
+          pepSelect.value = 'optimized';
+          document.getElementById('optimizedAlert').classList.remove('hidden');
+          document.getElementById('activeSequence').textContent = optimizedSeq;
+          sequence = optimizedSeq;
+      } else {
+          sequence = sequences[pepSelect.value] || sequences.cyclotide;
+      }
 
       loadPeptide();
     });
