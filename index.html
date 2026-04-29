@@ -338,16 +338,18 @@ document.getElementById('runBtn').onclick = async () => {
     // Load the winning variant structure into the viewer for this cycle
     status.textContent = `Folding cycle ${i} variant...`;
     
+    
+    await loadSequencePDB(bestSequence);
+
     // Save to localStorage for efficacy page!
     if (i === cycles) {
       localStorage.setItem('optimizedSequence', bestSequence);
-      if (window.lastPDBData) {
-        localStorage.setItem('optimizedPDB', window.lastPDBData);
+      const pdbToSave = window.lastPDBData || window.fallbackPDB;
+      if (pdbToSave) {
+        localStorage.setItem('optimizedPDB', pdbToSave);
       }
       addLog('Saved optimized sequence to memory for Efficacy analysis.');
     }
-    
-    await loadSequencePDB(bestSequence);
   }
 
   addLog('✓ Design complete');
