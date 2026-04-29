@@ -180,18 +180,28 @@
 
     async function loadPeptide() {
       try {
+        viewer.clear(); // Add viewer.clear() here!
         logMsg("Fetching intact scaffold...");
         let pdb = "";
-        if (document.getElementById('peptideType').value === 'optimized' && optimizedPDB) {
+        
+        // Also check if optimizedPDB exists and has actual length, occasionally esmatlas fails or returns short objects 
+        if (document.getElementById('peptideType').value === 'optimized' && optimizedPDB && optimizedPDB.length > 50) {
            logMsg("Using pre-folded structure from memory.");
            pdb = optimizedPDB;
         } else {
            const res = await fetch('https://api.esmatlas.com/foldSequence/v1/pdb/', { method: 'POST', body: sequence });
+           if (!res.ok) throw new Error("API rate limited");
            pdb = await res.text();
         }
         
         viewer.addModel(pdb, "pdb");
-        viewer.setStyle({}, {cartoon: {color: colors.intact}});
+        
+        // Add sticks so single atom fallbacks don't fail silently
+        viewer.setStyle({}, {
+          cartoon: {color: colors.intact},
+          stick: {radius: 0.1, colorscheme: 'lightgreyCarbon'}
+        });
+        
         viewer.setStyle({resn: 'CYS'}, {
           cartoon: {color: colors.intact}, 
           stick: {colorscheme: 'yellowCarbon', radius: 0.2},
