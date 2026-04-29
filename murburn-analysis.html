@@ -155,15 +155,15 @@
 
       // Synchronously set up the dropdown and sequence BEFORE loading
       const pepSelect = document.getElementById('peptideType');
-      if (optimizedSeq) {
+      if (window.optimizedSeqGlobal) {
           const optElement = document.createElement('option');
           optElement.value = 'optimized';
           optElement.text = 'Optimized Kalata (Walk-Jump)';
           pepSelect.appendChild(optElement);
           pepSelect.value = 'optimized';
           document.getElementById('optimizedAlert').classList.remove('hidden');
-          document.getElementById('activeSequence').textContent = optimizedSeq;
-          sequence = optimizedSeq;
+          document.getElementById('activeSequence').textContent = window.optimizedSeqGlobal;
+          sequence = window.optimizedSeqGlobal;
       } else {
           sequence = sequences[pepSelect.value] || sequences.cyclotide;
       }
