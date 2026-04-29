@@ -121,17 +121,24 @@
     // Check if we have an optimized sequence from the Walk-Jump design
     const optimizedSeq = localStorage.getItem('optimizedSequence');
     const optimizedPDB = localStorage.getItem('optimizedPDB');
+    
+    // IMPORTANT: Make these globally accessible to loadPeptide even before DOMContentLoaded
+    window.optimizedSeqGlobal = optimizedSeq;
+    window.optimizedPDBGlobal = optimizedPDB;
+
     if (optimizedSeq) {
       sequences.optimized = optimizedSeq;
       // Add it to the dropdown options
       const optElement = document.createElement('option');
       optElement.value = 'optimized';
       optElement.text = 'Optimized Kalata (Walk-Jump)';
-      document.getElementById('peptideType').appendChild(optElement);
-      // Auto select it by default to showcase the seamless flow!
-      document.getElementById('peptideType').value = 'optimized';
-      document.getElementById('optimizedAlert').classList.remove('hidden');
-      document.getElementById('activeSequence').textContent = optimizedSeq;
+      document.addEventListener('DOMContentLoaded', () => {
+        document.getElementById('peptideType').appendChild(optElement);
+        // Auto select it by default to showcase the seamless flow!
+        document.getElementById('peptideType').value = 'optimized';
+        document.getElementById('optimizedAlert').classList.remove('hidden');
+        document.getElementById('activeSequence').textContent = optimizedSeq;
+      });
     }
 
     let sequence = sequences[document.getElementById('peptideType').value] || sequences.cyclotide;
@@ -185,9 +192,9 @@
         let pdb = "";
         
         // Also check if optimizedPDB exists and has actual length, occasionally esmatlas fails or returns short objects 
-        if (document.getElementById('peptideType').value === 'optimized' && optimizedPDB && optimizedPDB.length > 50) {
+        if (document.getElementById('peptideType').value === 'optimized' && window.optimizedPDBGlobal && window.optimizedPDBGlobal.length > 50) {
            logMsg("Using pre-folded structure from memory.");
-           pdb = optimizedPDB;
+           pdb = window.optimizedPDBGlobal;
         } else {
            const res = await fetch('https://api.esmatlas.com/foldSequence/v1/pdb/', { method: 'POST', body: sequence });
            if (!res.ok) throw new Error("API rate limited");
