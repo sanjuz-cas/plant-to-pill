@@ -341,6 +341,9 @@ document.getElementById('runBtn').onclick = async () => {
     // Save to localStorage for efficacy page!
     if (i === cycles) {
       localStorage.setItem('optimizedSequence', bestSequence);
+      if (window.lastPDBData) {
+        localStorage.setItem('optimizedPDB', window.lastPDBData);
+      }
       addLog('Saved optimized sequence to memory for Efficacy analysis.');
     }
     

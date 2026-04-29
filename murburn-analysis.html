@@ -45,6 +45,7 @@
 
         <div id="optimizedAlert" class="hidden mb-4 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-700">
           ✨ Using your Walk-Jump optimized sequence from Design module!
+          <div id="activeSequence" class="font-mono text-[10px] mt-1 text-slate-500 break-all"></div>
         </div>
 
         <label class="text-sm text-slate-600">DROS Concentration: <span id="drosVal">Medium</span></label>
@@ -119,6 +120,7 @@
     
     // Check if we have an optimized sequence from the Walk-Jump design
     const optimizedSeq = localStorage.getItem('optimizedSequence');
+    const optimizedPDB = localStorage.getItem('optimizedPDB');
     if (optimizedSeq) {
       sequences.optimized = optimizedSeq;
       // Add it to the dropdown options
@@ -129,6 +131,7 @@
       // Auto select it by default to showcase the seamless flow!
       document.getElementById('peptideType').value = 'optimized';
       document.getElementById('optimizedAlert').classList.remove('hidden');
+      document.getElementById('activeSequence').textContent = optimizedSeq;
     }
 
     let sequence = sequences[document.getElementById('peptideType').value] || sequences.cyclotide;
@@ -166,6 +169,7 @@
       
       if (e.target.value === 'optimized') {
         document.getElementById('optimizedAlert').classList.remove('hidden');
+        document.getElementById('activeSequence').textContent = sequences.optimized;
       } else {
         document.getElementById('optimizedAlert').classList.add('hidden');
       }
@@ -177,8 +181,15 @@
     async function loadPeptide() {
       try {
         logMsg("Fetching intact scaffold...");
-        const res = await fetch('https://api.esmatlas.com/foldSequence/v1/pdb/', { method: 'POST', body: sequence });
-        const pdb = await res.text();
+        let pdb = "";
+        if (document.getElementById('peptideType').value === 'optimized' && optimizedPDB) {
+           logMsg("Using pre-folded structure from memory.");
+           pdb = optimizedPDB;
+        } else {
+           const res = await fetch('https://api.esmatlas.com/foldSequence/v1/pdb/', { method: 'POST', body: sequence });
+           pdb = await res.text();
+        }
+        
         viewer.addModel(pdb, "pdb");
         viewer.setStyle({}, {cartoon: {color: colors.intact}});
         viewer.setStyle({resn: 'CYS'}, {
@@ -191,7 +202,18 @@
         logMsg("Scaffold loaded. Cystine knot visible.");
       } catch(e) {
         logMsg("Failed to load PDB (rate limit). Using mock structure...", true);
-        // Fallback or just skip for now, viewer handles empty state okayish if error
+        // Provide a mock structure if the fetch fails completely
+        const mockPDB = \`HEADER    MOCK FALLBACK PDB
+ATOM      1  N   GLY A   1      -0.000   0.000   0.000  1.00  0.00           N  
+ATOM      2  CA  GLY A   1       1.458   0.000   0.000  1.00  0.00           C  
+ATOM      3  C   GLY A   1       2.009   1.424   0.000  1.00  0.00           C  
+ATOM      4  O   GLY A   1       1.328   2.435   0.000  1.00  0.00           O  
+ATOM      5  CB  GLY A   1       2.000  -0.700  -1.200  1.00  0.00           C  
+END\`;
+        viewer.addModel(mockPDB, "pdb");
+        viewer.setStyle({}, {cartoon: {color: colors.intact}, ribbon: true});
+        viewer.zoomTo();
+        viewer.render();
       }
     }
 
