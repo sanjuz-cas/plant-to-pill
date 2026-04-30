@@ -146,6 +146,23 @@
       viewer = $3Dmol.createViewer("viewer", { defaultcolors: $3Dmol.pascalElementColors });
       viewer.setBackgroundColor(0x0f172a); // dark slate 900 for cool contrast
       
+      // Enable hover labels
+      viewer.setHoverable({}, true, function(atom, viewer, event, container) {
+          if(!atom.label) {
+              atom.label = viewer.addLabel(atom.resn + " " + atom.resi + " : " + atom.atom, {
+                  position: {x: atom.x, y: atom.y, z: atom.z}, 
+                  backgroundColor: 'white', 
+                  fontColor: 'black',
+                  backgroundOpacity: 0.8
+              });
+          }
+      }, function(atom, viewer) { 
+          if(atom.label) {
+              viewer.removeLabel(atom.label);
+              delete atom.label;
+          }
+      });
+
       const ctx = document.getElementById('integrityChart').getContext('2d');
       chart = new Chart(ctx, {
         type: 'line',
@@ -222,20 +239,45 @@
         viewer.render();
         logMsg("Scaffold loaded. Cystine knot visible.");
       } catch(e) {
-        logMsg("Failed to load PDB (rate limit). Using mock structure...", true);
-        // Provide a mock structure if the fetch fails completely
-        const mockPDB = \`HEADER    MOCK FALLBACK PDB
-ATOM      1  N   GLY A   1      -0.000   0.000   0.000  1.00  0.00           N  
-ATOM      2  CA  GLY A   1       1.458   0.000   0.000  1.00  0.00           C  
-ATOM      3  C   GLY A   1       2.009   1.424   0.000  1.00  0.00           C  
-ATOM      4  O   GLY A   1       1.328   2.435   0.000  1.00  0.00           O  
-ATOM      5  CB  GLY A   1       2.000  -0.700  -1.200  1.00  0.00           C  
-END\`;
+        console.error("Structure load error:", e);
+        logMsg("Failed to load PDB (rate limit). Generating synthetic backbone for " + sequence.length + " residues...", true);
+        
+        // Let's generate a dynamic mock structure based exactly on the chosen sequence length and types so they aren't mixed up!
+        let mockPDB = "HEADER    DYNAMIC FALLBACK PDB\n";
+        for (let i = 0; i < sequence.length; i++) {
+            const resn = getResn(sequence[i]) || "GLY";
+            // Simple offset generation so it makes a line/spiral
+            const x = (i * 3.8).toFixed(3);
+            const y = (Math.sin(i * 1.5) * 5).toFixed(3);
+            const z = (Math.cos(i * 1.5) * 5).toFixed(3);
+            
+            mockPDB += `ATOM  ${('' + (i+1)).padStart(5, ' ')}  CA  ${resn} A${('' + (i+1)).padStart(4, ' ')}    ${x.padStart(8, ' ')}${y.padStart(8, ' ')}${z.padStart(8, ' ')}  1.00  0.00           C  \n`;
+        }
+        mockPDB += "END\n";
+
         viewer.addModel(mockPDB, "pdb");
-        viewer.setStyle({}, {cartoon: {color: colors.intact}, ribbon: true});
+        // Use sphere/stick because cartoon requires N, CA, C backbone
+        viewer.setStyle({}, {
+            stick: {radius: 0.15, colorscheme: 'lightgreyCarbon'}, 
+            sphere: {radius: 0.4, colorscheme: 'lightgreyCarbon'}
+        });
+        viewer.setStyle({resn: 'CYS'}, {
+          stick: {colorscheme: 'yellowCarbon', radius: 0.2},
+          sphere: {colorscheme: 'yellowCarbon', radius: 0.5}
+        });
         viewer.zoomTo();
         viewer.render();
       }
+    }
+
+    // Helper to map single letter to 3 letter
+    function getResn(char) {
+        const map = {
+            'C': 'CYS', 'G': 'GLY', 'I': 'ILE', 'V': 'VAL', 'E': 'GLU', 'Q': 'GLN',
+            'T': 'THR', 'S': 'SER', 'L': 'LEU', 'Y': 'TYR', 'N': 'ASN', 'P': 'PRO',
+            'D': 'ASP', 'W': 'TRP', 'R': 'ARG'
+        };
+        return map[char] || "GLY";
     }
 
     function logMsg(msg, isError=false) {

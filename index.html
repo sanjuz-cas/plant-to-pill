@@ -131,6 +131,24 @@ window.addEventListener('DOMContentLoaded', () => {
     defaultcolors: $3Dmol.rasmolElementColors
   });
   viewer.setBackgroundColor(0xf8fafc);
+  
+  // Enable hover labels
+  viewer.setHoverable({}, true, function(atom, viewer, event, container) {
+      if(!atom.label) {
+          atom.label = viewer.addLabel(atom.resn + " " + atom.resi + " : " + atom.atom, {
+              position: {x: atom.x, y: atom.y, z: atom.z}, 
+              backgroundColor: 'black', 
+              fontColor: 'white',
+              backgroundOpacity: 0.8
+          });
+      }
+  }, function(atom, viewer) { 
+      if(atom.label) {
+          viewer.removeLabel(atom.label);
+          delete atom.label;
+      }
+  });
+
   // Show default sequence initially
   document.getElementById('seq').innerHTML = currentSequence;
   loadSequencePDB(currentSequence);
