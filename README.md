@@ -10,6 +10,9 @@ Most biologics (peptide/protein drugs like Insulin) must be injected. If taken o
 Nature solved this. The African plant *Oldenlandia affinis* produces "Cyclotides" (e.g. **Kalata B1**)  ultra-dense folded rings tied in a *Cystine Knot*. Because of the knots and the continuous ring lacking N/C termini, the stomach acid and DROS slide right off the molecule, yielding high bioavailability in the gut.
 
 Plant2Pill turns the Cyclotide scaffold into an open-source pill chassis. 
+## MVP Demo
+🔗 **[Live Demo: https://sanjuz-cas.github.io/plant-to-pill/](https://sanjuz-cas.github.io/plant-to-pill/)**
+
 ## Demo Video
 <video src="https://github.com/sanjuz-cas/plant-to-pill/raw/main/assets/demo_p2p.mp4" controls="controls" width="100%"></video>
 
