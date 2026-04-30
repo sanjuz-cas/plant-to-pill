@@ -13,6 +13,8 @@ Plant2Pill turns the Cyclotide scaffold into an open-source pill chassis.
 ## Demo Video
 <video src="https://github.com/sanjuz-cas/plant-to-pill/raw/main/assets/demo_p2p.mp4" controls="controls" width="100%"></video>
 
+![Plant2Pill Demo](assets/demo_p2p.gif)
+
 ## Features
 - **Walk-Jump Engine (`index.html`):** Instead of using brute-force combinatorics (which has a 1-in-15 folding yield challenge), Plant2Pill leverages mathematical hydrophobicity/charge vectoring against the *Sequence Latent Space*. It mutates sequences in steps, queries Meta's ESMFold Atlas API to unfold its 3D state dynamically, scores the variants via DCS (Directed Cystine Scoring), and visualizes molecular mutation sequentially.
 - **Murburn DROS Simulation (`murburn-analysis.html`):** A custom physics simulation that acts against the 3D-generated framework. By swapping between a *Linear Insulin* model and the *Kalata B1 Cyclotide*, users can watch DROS molecules actively cleave and oxidize structures based on their residue density.
