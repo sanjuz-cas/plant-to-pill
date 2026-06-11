@@ -1,0 +1,298 @@
+/* sandbox.css, Sandbox panel scoped styles (every selector is prefixed
+   with #panel-sandbox to avoid leaking onto the Demo / Recipe panels).
+   Originally ported from the legacy index.html sandbox. */
+
+/* Extra breathing room between the intro lede and the first card stack
+   so the playground header doesn't feel glued to the paragraph above. */
+#panel-sandbox .tab-lede { margin-bottom: 24px; }
+
+/* --- Data-safety warning. Sits above the first card. Amber accent so it
+   reads as caution (not danger), but stays editorial: same paper-card
+   chrome as everything else in the panel. --- */
+#panel-sandbox .sb-safety {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 12px 16px;
+  margin-bottom: 18px;
+  background: #fbf3df;
+  border: 1px solid #e0c98a;
+  border-left: 3px solid #c89b40;
+  border-radius: 4px;
+  font-size: 13px; line-height: 1.55;
+  color: #4a3a14;
+}
+#panel-sandbox .sb-safety__icon {
+  font-size: 18px;
+  line-height: 1;
+  color: #c89b40;
+  flex: 0 0 auto;
+  padding-top: 1px;
+}
+#panel-sandbox .sb-safety__body strong {
+  font-weight: 600;
+  color: #3a2a04;
+}
+
+#panel-sandbox .sb-header__meta {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px; color: #555; font-weight: 400;
+  letter-spacing: 0.4px; word-break: break-all;
+}
+
+/* --- Card panel (Prompt / Sequence). Replaces the old .sb-section-title
+   single-line headers, each section now sits in its own bordered card
+   with an eyebrow/title/hint header on top and a padded body below. */
+#panel-sandbox .sb-card {
+  background: #fbfaf3;
+  border: 1px solid var(--hairline);
+  border-radius: 4px;
+  margin-bottom: 18px;
+  padding: 12px 12px;
+}
+#panel-sandbox .sb-card__header {
+  padding: 0 12px 12px;
+  border-bottom: 1px solid #ece9da;
+}
+#panel-sandbox .sb-card__eyebrow {
+  display: inline-block;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 9px; font-weight: 500;
+  color: var(--green);
+  text-transform: uppercase; letter-spacing: 1.5px;
+  margin-right: 6px;
+}
+#panel-sandbox .sb-card__title {
+  margin: 4px 0 0;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 15px; font-weight: 500;
+  letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--ink);
+}
+#panel-sandbox .sb-card__hint {
+  margin: 4px 0 0;
+  font-family: "Inter", sans-serif;
+  font-size: 11.5px; color: #777; font-weight: 300;
+  line-height: 1.5;
+}
+#panel-sandbox .sb-card__hint code {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10.5px;
+  background: #ece9da;
+  padding: 1px 5px; border-radius: 2px;
+  color: #1f1f1d;
+}
+#panel-sandbox .sb-card__header--with-meta {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 18px;
+}
+#panel-sandbox .sb-card__heading { min-width: 0; }
+#panel-sandbox .sb-card__meta {
+  text-align: right;
+  flex: 0 0 auto;
+  max-width: 50%;
+}
+#panel-sandbox .sb-card__body {
+  padding: 16px 20px 22px;
+}
+#panel-sandbox .sb-examples {
+  display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px;
+  align-items: center;
+}
+#panel-sandbox .sb-examples-label {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px; color: #999; text-transform: uppercase; letter-spacing: 1px;
+  margin-right: 4px;
+}
+#panel-sandbox .sb-ex-btn {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px; padding: 3px 8px;
+  border: 1px solid #ddd; border-radius: 3px;
+  background: #fff; color: #666; cursor: pointer;
+  transition: all 0.15s;
+}
+#panel-sandbox .sb-ex-btn:hover { border-color: #888; color: #1f1f1d; }
+#panel-sandbox .sb-ex-btn .sb-ex-label {
+  color: #aaa; font-size: 9px; margin-left: 6px; text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+#panel-sandbox .sb-prompt-area, #panel-sandbox input[type=number] {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px; font-weight: 300; color: #1f1f1d;
+  background: #fff; border: 1px solid #ddd; border-radius: 3px;
+  padding: 8px 12px; outline: none; transition: border 0.15s;
+}
+#panel-sandbox .sb-prompt-area:focus,
+#panel-sandbox input[type=number]:focus { border-color: #1f1f1d; }
+#panel-sandbox .sb-prompt-area {
+  width: 100%; resize: none; overflow: hidden;
+  letter-spacing: 1px; line-height: 1.7;
+  min-height: 72px;
+  padding: 12px 14px;
+  margin-top: 12px;
+}
+/* Controls row: params on the left (max tokens, temperature, top-p,
+   color mode), action buttons pinned to the right with a divider in
+   between. Wraps cleanly on narrow viewports. */
+#panel-sandbox .sb-controls {
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid #ece9da;
+}
+#panel-sandbox .sb-controls__params {
+  display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+  flex: 1 1 auto;
+}
+#panel-sandbox .sb-controls__actions {
+  display: flex; gap: 6px;
+  margin-left: auto;
+  padding-left: 16px;
+  border-left: 1px solid #ece9da;
+}
+#panel-sandbox .sb-control {
+  display: flex; align-items: center; gap: 6px;
+  font-family: "JetBrains Mono", monospace; font-size: 10px; color: #666;
+  text-transform: uppercase; letter-spacing: 1px;
+}
+#panel-sandbox .sb-control input[type=number] {
+  width: 64px; padding: 4px 6px; font-size: 11px; text-align: right;
+}
+#panel-sandbox .sb-mode-group {
+  display: flex; align-items: center; gap: 6px;
+  font-family: "JetBrains Mono", monospace; font-size: 10px; color: #666;
+  text-transform: uppercase; letter-spacing: 1px;
+}
+#panel-sandbox .sb-mode-btns { display: flex; }
+#panel-sandbox .sb-mode-btn {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px; padding: 4px 9px;
+  border: 1px solid #ccc; border-right: none;
+  background: #fff; color: #666; cursor: pointer;
+  text-transform: uppercase; letter-spacing: 1px;
+  transition: all 0.15s;
+}
+#panel-sandbox .sb-mode-btn:first-child { border-radius: 3px 0 0 3px; }
+#panel-sandbox .sb-mode-btn:last-child { border-right: 1px solid #ccc; border-radius: 0 3px 3px 0; }
+#panel-sandbox .sb-mode-btn:hover { color: #1f1f1d; }
+#panel-sandbox .sb-mode-btn.active { background: #1f1f1d; color: #fff; border-color: #1f1f1d; }
+
+#panel-sandbox .sb-status {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px; color: #666;
+  text-transform: uppercase; letter-spacing: 1.5px;
+  margin-top: 12px;
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 10px;
+  background: #fff; border: 1px solid #e6e3d4; border-radius: 12px;
+}
+#panel-sandbox .sb-status.is-hidden { display: none; }
+#panel-sandbox .sb-status.error { color: #b00020; text-transform: none; letter-spacing: 0.3px; }
+#panel-sandbox .sb-status .dot {
+  display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+  background: #888;
+}
+/* `pulse` keyframe lives in base.css. */
+#panel-sandbox .sb-status.streaming .dot { background: #317f3f; animation: pulse 1.2s ease-in-out infinite; }
+
+#panel-sandbox .sb-output-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 200px;
+  gap: 16px;
+}
+@media (max-width: 720px) {
+  #panel-sandbox .sb-output-row { grid-template-columns: 1fr; }
+}
+
+#panel-sandbox .sb-seq-wrap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+#panel-sandbox .sb-copy-btn {
+  position: absolute; top: 8px; right: 8px; z-index: 2;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 9px; font-weight: 400;
+  padding: 3px 8px; border: 1px solid #ddd; border-radius: 3px;
+  background: #fff; color: #666; cursor: pointer;
+  text-transform: uppercase; letter-spacing: 1px;
+  transition: all 0.15s;
+}
+#panel-sandbox .sb-copy-btn:hover { border-color: #888; color: #1f1f1d; }
+#panel-sandbox .sb-copy-btn:disabled { opacity: 0; pointer-events: none; }
+#panel-sandbox .sb-copy-btn.copied { background: #317f3f; color: #fff; border-color: #317f3f; }
+
+#panel-sandbox .sb-seq-block {
+  font-family: "JetBrains Mono", monospace;
+  background: #fff; border: 1px solid #ddd;
+  padding: 16px 20px;
+  white-space: pre; font-size: 12px; font-weight: 400;
+  line-height: 1.85; letter-spacing: 1.5px;
+  min-height: 80px;
+  flex: 1 0 auto;
+  /* Defense-in-depth: if the bases-per-line calculation ever overshoots
+     (e.g. before the web font finishes loading), keep the overflow inside
+     the block as a horizontal scroll instead of bleeding into the page. */
+  overflow-x: auto;
+}
+#panel-sandbox .sb-seq-block.empty {
+  color: #cfcfcf;
+  font-weight: 300;
+  letter-spacing: normal;
+  background: #fff;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#panel-sandbox .sb-seq-line { white-space: pre; }
+#panel-sandbox .sb-pos { color: #bbb; user-select: none; font-weight: 300; }
+#panel-sandbox .sb-seq-line.tail::after {
+  content: "";
+  display: inline-block; width: 7px; height: 14px;
+  background: #1f1f1d; vertical-align: text-bottom;
+  margin-left: 2px;
+  animation: blink 1s step-end infinite;
+}
+@keyframes blink { 50% { opacity: 0; } }
+
+#panel-sandbox .sb-stats {
+  position: sticky; top: 120px;
+  border: 1px solid #ddd; background: #fff;
+}
+#panel-sandbox .sb-stat {
+  display: flex; justify-content: space-between; align-items: baseline;
+  padding: 8px 12px;
+  border-bottom: 1px solid #eee;
+  font-family: "JetBrains Mono", monospace;
+}
+#panel-sandbox .sb-stat:last-child { border-bottom: none; }
+#panel-sandbox .sb-stat-label {
+  font-size: 9px; color: #999;
+  text-transform: uppercase; letter-spacing: 1.2px; font-weight: 300;
+}
+#panel-sandbox .sb-stat-value {
+  font-size: 12px; font-weight: 400; color: #1f1f1d;
+  font-variant-numeric: tabular-nums;
+}
+#panel-sandbox .sb-stat-value .sb-unit { font-size: 9px; color: #999; margin-left: 3px; font-weight: 300; }
+
+#panel-sandbox .sb-legend {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: #fff; border: 1px solid #ddd;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 9px; color: #888;
+  text-transform: uppercase; letter-spacing: 1px;
+  display: none;
+}
+#panel-sandbox .sb-legend.show { display: block; }
+#panel-sandbox .sb-legend-bar {
+  height: 6px; margin: 4px 0 3px;
+  background: linear-gradient(to right, #bc2e25, #888, #1f1f1d);
+  border-radius: 1px;
+}
+#panel-sandbox .sb-legend-row { display: flex; justify-content: space-between; }
+#panel-sandbox .sb-lp-chart {
+  display: block; width: 100%; height: 40px;
+  margin-top: 8px;
+}

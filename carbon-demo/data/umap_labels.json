@@ -1,0 +1,106 @@
+{
+  "species": [
+    "human",
+    "macaque",
+    "mouse",
+    "rat",
+    "dog",
+    "cow",
+    "pig",
+    "chicken",
+    "frog",
+    "zebrafish",
+    "fly",
+    "worm",
+    "arabidopsis",
+    "soybean",
+    "tomato",
+    "maize",
+    "rice",
+    "yeast",
+    "fission_yeast",
+    "candida",
+    "aspergillus",
+    "neurospora",
+    "ecoli",
+    "bsubtilis",
+    "saureus",
+    "sarscov2",
+    "hiv1"
+  ],
+  "biotypes": [
+    "protein_coding",
+    "lncRNA",
+    "snRNA",
+    "misc_RNA"
+  ],
+  "strands": [
+    "+",
+    "-"
+  ],
+  "species_kingdom": {
+    "human": "vertebrates",
+    "macaque": "vertebrates",
+    "mouse": "vertebrates",
+    "rat": "vertebrates",
+    "dog": "vertebrates",
+    "cow": "vertebrates",
+    "pig": "vertebrates",
+    "chicken": "vertebrates",
+    "frog": "vertebrates",
+    "zebrafish": "vertebrates",
+    "fly": "invertebrates",
+    "worm": "invertebrates",
+    "arabidopsis": "plants",
+    "soybean": "plants",
+    "tomato": "plants",
+    "maize": "plants",
+    "rice": "plants",
+    "yeast": "fungi",
+    "fission_yeast": "fungi",
+    "candida": "fungi",
+    "aspergillus": "fungi",
+    "neurospora": "fungi",
+    "ecoli": "bacteria",
+    "bsubtilis": "bacteria",
+    "saureus": "bacteria",
+    "sarscov2": "viruses",
+    "hiv1": "viruses"
+  },
+  "kingdoms": [
+    "vertebrates",
+    "invertebrates",
+    "plants",
+    "fungi",
+    "bacteria",
+    "viruses"
+  ],
+  "bounds_2d": [
+    -13.2362,
+    21.4102,
+    -12.5187,
+    23.0468
+  ],
+  "bounds_3d": [
+    -5.392,
+    18.9592,
+    -2.8041,
+    24.703,
+    -11.3491,
+    15.3082
+  ],
+  "length_log10_range": [
+    0.7781512503836436,
+    6.47142359330933
+  ],
+  "length_bp_range": [
+    6,
+    2960899
+  ],
+  "n_points": 571810,
+  "has_3d": false,
+  "has_gc": true,
+  "has_length": true,
+  "has_names": true,
+  "source": "HuggingFaceBio/carbon_embeddings (carbon_dana_embeddings_middle)"
+}

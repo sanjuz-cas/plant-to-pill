@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carbon · social banner</title>
+<!-- Internal screenshot tool — keep it out of search results and AI    -->
+<!-- training crawls. The canonical page is demo.html (served at /).    -->
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" type="image/svg+xml" href="/img/logo.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap">
+
+<!-- Reuses the same hero stylesheet as demo.html so the banner reads
+     identical to the editorial hero on the main page. -->
+<link rel="stylesheet" href="/assets/styles/base.css">
+<link rel="stylesheet" href="/assets/styles/banner.css">
+
+<style>
+  /* ------------------------------------------------------------------ */
+  /* Standalone page chrome.                                            */
+  /* The banner sits in the middle of the viewport at one of a handful  */
+  /* of fixed social-media canvas sizes (Twitter / OG / LinkedIn / HF). */
+  /* The page paper around it is a touch darker than the banner so the  */
+  /* edges of the social-media canvas read clearly — handy when you're  */
+  /* about to crop a screenshot.                                        */
+  /* ------------------------------------------------------------------ */
+  html, body { min-height: 100%; }
+  body {
+    background: #e8e5d6;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 28px;
+    /* Top padding sized so the banner stage sits roughly where it used
+       to (centred-ish in a 1080p window) while leaving room for the
+       logo contact-sheet below without forcing a scrollbar on common
+       screens. Falls back to scroll when there's genuinely more
+       content than fits. */
+    padding: clamp(28px, 6vh, 80px) 24px 80px;
+    overflow-x: hidden;
+  }
+
+  /* The social-banner-stage IS the social-media canvas: a fixed width
+     and height drawn at 1:1 device pixels so what you see is exactly
+     what gets exported. Sizes are driven by --sb-w / --sb-h CSS vars
+     set on <html> by the format switcher below. */
+  .social-banner-stage {
+    --sb-w: 1500px;
+    --sb-h: 500px;
+    width: var(--sb-w);
+    height: var(--sb-h);
+    flex-shrink: 0;
+    position: relative;
+    box-shadow:
+      0 1px 0 #cfcdbf inset,
+      0 30px 60px -28px rgba(31, 31, 29, 0.28),
+      0 8px 18px -10px rgba(31, 31, 29, 0.18);
+    /* Auto-scale to fit the viewport when the window is smaller than
+       the social canvas. The factor is set by JS (see fitStage()) so
+       the banner always renders centred and intact, even on a laptop
+       that can't physically fit a 1584-wide canvas. */
+    transform: scale(var(--sb-scale, 1));
+    transform-origin: center center;
+    transition: width 0.22s ease, height 0.22s ease;
+  }
+
+  /* The OG share thumbnail tile lower down on the page reuses the exact
+     same .carbon-banner hero markup as the main stage, just frozen at
+     1200×630 instead of switching format. Every override below is
+     shared between the two contexts (the main stage and the OG tile)
+     so the OG screenshot reads as a smaller-ratio crop of the hero,
+     not a separate "thumbnail" composition. The .sb-logo-stage--og
+     selector picks up exactly the same rules as .social-banner-stage. */
+
+  /* Inside the stage the banner fills it entirely (no max-width cap
+     like on the main page — here the banner IS the canvas). */
+  .social-banner-stage .carbon-banner,
+  .sb-logo-stage--og .carbon-banner {
+    width: 100%;
+    height: 100%;
+  }
+  .social-banner-stage .banner-inner,
+  .sb-logo-stage--og .banner-inner {
+    max-width: none;
+    height: 100%;
+    /* Tabs are gone — drop the asymmetric bottom-zero padding from the
+       main hero so the headline sits visually centred top↔bottom. */
+    padding: 36px 56px;
+    /* 2-col grid: headline on the left, helix on the right. The right
+       track is sized as a share of the total stage width so the helix
+       gets more room on a wide LinkedIn cover and less on a tall OG
+       card. Bumped from 36% → 44% (cap 520 → 600) compared to the main
+       demo hero so the DNA strand has more horizontal real estate to
+       breathe and the wordmark on the left can spread out beside it
+       without feeling cramped against the helix. */
+    grid-template-columns: minmax(0, 1fr) clamp(320px, 44%, 600px);
+    gap: 32px;
+    min-height: 0;
+  }
+
+  /* Helix canvas override — pulls the strand a bit further left than the
+     main demo (-25px → -56px translate) and widens the canvas overshoot
+     so the helix doesn't hug the right edge of the social card. The
+     extra width also keeps the bases on the right side from clipping
+     against the stage frame on wider canvases (LinkedIn 1584). */
+  .social-banner-stage .cb-helix-canvas,
+  .sb-logo-stage--og .cb-helix-canvas {
+    right: -72px;
+    width: calc(100% + 132px);
+    transform: translateX(-56px) rotate(5deg);
+  }
+  /* OG tile only: nudge the helix back to the right. The 1200×630 ratio
+     gives the strand more vertical real estate than the wide formats
+     (Twitter 1500×500, LinkedIn 1584×396), so it doesn't need to crowd
+     toward the left to balance against the wordmark — letting it sit a
+     little further right keeps a clean strip of paper between the
+     wordmark and the strand at the OG ratio. */
+  .sb-logo-stage--og .cb-helix-canvas {
+    transform: translateX(-18px) rotate(5deg);
+  }
+  .social-banner-stage .banner-left,
+  .sb-logo-stage--og .banner-left {
+    /* No more bottom tab row → 2-row layout: identity strip on top,
+       headline filling the rest. */
+    grid-template-rows: auto 1fr;
+    gap: 14px;
+  }
+
+  /* Headline sizing: tied to the stage height instead of the viewport
+     so the wordmark scales with the social canvas, not the browser
+     window. cqh = container-query-height, falls back to a fixed size
+     on browsers without container queries. */
+  .social-banner-stage,
+  .sb-logo-stage--og { container-type: size; }
+  .social-banner-stage .banner-wordmark,
+  .sb-logo-stage--og .banner-wordmark {
+    font-size: clamp(64px, 22cqh, 140px);
+  }
+  .social-banner-stage .banner-subtitle,
+  .sb-logo-stage--og .banner-subtitle {
+    font-size: clamp(11px, 2.6cqh, 16px);
+    margin-top: 10px;
+  }
+  .social-banner-stage .banner-specs,
+  .sb-logo-stage--og .banner-specs {
+    font-size: clamp(10px, 2.2cqh, 13px);
+    margin-top: 10px;
+  }
+  .social-banner-stage .banner-title,
+  .sb-logo-stage--og .banner-title { font-size: clamp(12px, 2.6cqh, 16px); }
+  .social-banner-stage .banner-path,
+  .sb-logo-stage--og .banner-path  { font-size: clamp(10px, 2.2cqh, 13px); }
+
+  /* Hide the blinking caret on the 4 thumbnail tiles (share thumb +
+     three model-card covers). The caret animates in CSS, so even with
+     data-static freezing the helix, the cursor would still blink on a
+     "static" composition — which is fine on the live demo header where
+     it reads as an editorial flourish, but distracting on a still
+     export where it freezes mid-blink half the time. Main stage at the
+     top of the page keeps it (since users won't be screenshotting that
+     one, it's the live preview reference). */
+  .sb-logo-stage--og .banner-cursor { display: none; }
+
+  /* Slightly stronger inset hairline replaces the bottom one we lose
+     with the tabs gone — keeps the banner from looking unfinished.
+     Only on the main stage: the OG tile already has a hairline coming
+     from .sb-logo-card and a second inset stroke would double up. */
+  .social-banner-stage .carbon-banner {
+    box-shadow: inset 0 0 0 1px #cfcdbf;
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Format switcher — discreet row of pills below the banner. Sets a   */
+  /* CSS var on <html> + a data attribute the JS reads to recompute     */
+  /* the scale-to-fit factor. Excluded from screenshots: the row sits   */
+  /* far enough below the stage that any crop framed on the banner      */
+  /* itself won't catch it.                                             */
+  /* ------------------------------------------------------------------ */
+  .sb-switcher {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #6f6d65;
+  }
+  .sb-switcher__label {
+    margin-right: 8px;
+    color: #8a8a85;
+  }
+  .sb-switcher__btn {
+    appearance: none;
+    border: 1px solid #cfcdbf;
+    background: #f7f5ee;
+    color: inherit;
+    font-family: inherit;
+    font-size: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    padding: 7px 12px;
+    cursor: pointer;
+    transition: background 0.16s, border-color 0.16s, color 0.16s;
+  }
+  .sb-switcher__btn:hover {
+    background: #fff;
+    border-color: #b8b5a6;
+    color: #1f1f1d;
+  }
+  .sb-switcher__btn.is-active {
+    background: #1f1f1d;
+    border-color: #1f1f1d;
+    color: #f7f5ee;
+  }
+  .sb-switcher__dim {
+    margin-left: 8px;
+    color: #b0ada0;
+    font-feature-settings: "tnum";
+  }
+
+  /* Print: hide chrome, show the banner at its true size. */
+  @media print {
+    body { background: white; padding: 0; }
+    .sb-switcher { display: none; }
+    .social-banner-stage { transform: none !important; box-shadow: none; }
+    .sb-logos,
+    .sb-thumbs { page-break-before: always; }
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* Logo showcase.                                                     */
+  /* Sits below the banner stage so the same page doubles as a brand    */
+  /* contact-sheet: the square mark, the square lockup with wordmark,   */
+  /* and the wide rectangular lockup, each painted at its native pixel  */
+  /* size on a paper card. Screenshot one tile and you have the asset   */
+  /* at the exact dimensions of the source SVG, ready to drop into a    */
+  /* deck or a README without any re-export step.                       */
+  /* ------------------------------------------------------------------ */
+  .sb-section-label {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: #6f6d65;
+    margin-top: 24px;
+    /* Hairline tick under the label, matching the section dividers used
+       on demo.html so the chrome reads as part of the same family. */
+    border-bottom: 1px solid #d6d3c4;
+    padding-bottom: 6px;
+    width: 100%;
+    max-width: 1100px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .sb-section-label__hint {
+    color: #b0ada0;
+    text-transform: none;
+    letter-spacing: 0.06em;
+    font-size: 10px;
+  }
+
+  .sb-logos,
+  .sb-thumbs {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 24px;
+    /* Auto-scale row when the viewport is too narrow for the stages
+       side-by-side at native size, mirroring the auto-fit behaviour the
+       banner stage already does for itself (see fitStage in the script
+       below). JS sets --sb-row-scale on each wrapper. */
+    transform: scale(var(--sb-row-scale, 1));
+    transform-origin: center top;
+  }
+  .sb-logo-card {
+    background: #f7f5ee;
+    box-shadow:
+      0 1px 0 #cfcdbf inset,
+      0 14px 28px -18px rgba(31, 31, 29, 0.22),
+      0 6px 14px -10px rgba(31, 31, 29, 0.14);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+  }
+  /* The .sb-logo-stage IS the export canvas: width × height pinned to the
+     SVG's native viewBox in pixels so a screenshot of the stage matches
+     the source 1:1. The inner <img> fills the stage. No 1px hairline
+     around the SVG itself — the surrounding card already supplies enough
+     chrome (drop shadow + cream backplate) and a stroke would creep into
+     the export when screenshotting tight on the asset. */
+  .sb-logo-stage {
+    --w: 230px;
+    --h: 230px;
+    width: var(--w);
+    height: var(--h);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f7f5ee;
+  }
+  .sb-logo-stage img {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: contain;
+  }
+  /* Per-variant sizes, sourced from each SVG's viewBox so the stage
+     matches the asset 1:1 on screen. */
+  .sb-logo-stage--mark      { --w: 230px; --h: 230px; }
+  .sb-logo-stage--square    { --w: 230px; --h: 230px; }
+  .sb-logo-stage--rectangle { --w: 487px; --h: 230px; }
+
+  /* logo.svg is the 110×110 standalone mark (no wordmark). Painted on a
+     230×230 stage so the tile lines up visually with the other square
+     lockups, but the inner <img> is capped so the hex doesn't get blown
+     up larger than its natural size — keeps the optical weight in line
+     with the square lockup next to it. */
+  .sb-logo-stage--mark img {
+    width: 160px;
+    height: 160px;
+  }
+  /* OG / share thumbnail — laid out at the canonical 1200×630 social-card
+     ratio (the size Facebook, Twitter / X, LinkedIn, Slack, Discord and
+     iMessage all crop to). A screenshot of the stage at 100% IS the
+     /img/thumb.png replacement: drop the PNG straight into img/ and
+     bump the og:image:width/height meta in demo.html accordingly. The inner
+     .carbon-banner markup is identical to the main stage; the cqh-based
+     font-size rules and the .sb-logo-stage--og selectors above retune
+     the hero to the OG ratio automatically — no separate composition. */
+  .sb-logo-stage--og {
+    --w: 1200px;
+    --h: 630px;
+    /* No extra padding here: the .banner-inner inside .carbon-banner
+       handles its own internal gutters via the shared override above.
+       Stage background only shows through the helix overshoot, which
+       is the same paper used by the main stage. */
+    background: var(--paper, #f7f5ee);
+    /* Clip the rotated helix overshoot at the stage edge so the
+       screenshot crop is clean. Mirrors .carbon-banner's own
+       overflow:hidden which already clips inside the banner, but we
+       repeat it here for safety in case the canvas drifts further out
+       than the inner banner clip. */
+    overflow: hidden;
+  }
+
+  .sb-logo-meta {
+    font-family: "JetBrains Mono", ui-monospace, monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: #6f6d65;
+    padding: 10px 12px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    border-top: 1px solid #cfcdbf;
+    background: #fbf9f2;
+    /* Constrain the row to the stage width so the long filename has
+       to truncate (with --name min-width:0) instead of pushing the
+       dim+copy chips off the right edge of the card. */
+    min-width: 0;
+  }
+  .sb-logo-meta__name {
+    color: #1f1f1d;
+    font-weight: 500;
+    /* Flex item with min-width:0 so the JetBrains Mono filename can
+       shrink and ellipsize instead of forcing the meta row wider than
+       its stage (most visible on the square tile, whose 230px width
+       is barely enough for the full "logo-black-square.svg"). */
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  /* Discreet "copy path" affordance so the SVG file name can be grabbed
+     without leaving the page. The button replaces itself with a "copied"
+     pill for ~1s on success. */
+  .sb-logo-meta__copy {
+    appearance: none;
+    border: 1px solid #cfcdbf;
+    background: #fff;
+    color: #6f6d65;
+    font-family: inherit;
+    font-size: 9px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    padding: 3px 7px;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+    flex-shrink: 0;
+  }
+  .sb-logo-meta__copy:hover {
+    background: #1f1f1d;
+    border-color: #1f1f1d;
+    color: #f7f5ee;
+  }
+  .sb-logo-meta__copy.is-copied {
+    background: #317f3f;
+    border-color: #317f3f;
+    color: #f7f5ee;
+  }
+</style>
+</head>
+<body>
+
+<!-- The social-media canvas. The wrapping .social-banner-stage carries
+     the exact pixel dimensions (1500×500 for Twitter by default); the
+     .carbon-banner inside is the same hero block as on demo.html, minus
+     the logo card and minus the tab strip. -->
+<div class="social-banner-stage" id="sb-stage">
+  <header class="carbon-banner" aria-label="Carbon DNA model banner">
+    <div class="banner-inner">
+      <div class="banner-left">
+
+        <!-- Identity strip — square brand mark (img/logo.svg, the latest
+             black-hex stamp) sitting flush with the model-card breadcrumb,
+             same composition as the hero on demo.html. The SVG ships with
+             its own black frame so .logo-card stays chrome-free here too. -->
+        <div class="banner-identity">
+          <a class="logo-card" href="#" aria-label="Carbon, go to top">
+            <img class="logo-img" src="/img/logo.svg" alt="" width="44" height="44">
+          </a>
+          <div class="banner-breadcrumb">
+            <div class="banner-title">CARBON</div>
+            <div class="banner-path">huggingfacebio/carbon-3b</div>
+          </div>
+        </div>
+
+        <!-- Headline: oversized wordmark with blinking caret, then
+             tagline + spec sheet underneath. Same structure as
+             demo.html so the styling carries over verbatim. -->
+        <div class="banner-headline">
+          <h1 class="banner-wordmark"><span>CARBON</span><span class="banner-cursor" aria-hidden="true"></span></h1>
+          <p class="banner-subtitle">Autoregressive Genomic Foundation Model</p>
+          <ul class="banner-specs" aria-label="Model specs">
+            <li class="banner-spec"><strong>393,216</strong> bp context</li>
+            <li class="banner-spec"><strong>6-mer</strong> tokenizer</li>
+            <li class="banner-spec"><strong>1T</strong> train tokens</li>
+          </ul>
+        </div>
+
+      </div>
+
+      <!-- Animated DNA helix, painted by banner.js. -->
+      <div class="banner-helix" aria-hidden="true">
+        <canvas class="cb-helix-canvas"></canvas>
+      </div>
+    </div>
+  </header>
+</div>
+
+<!-- Format switcher. Stays outside the stage so it doesn't show up
+     when you crop the banner. -->
+<div class="sb-switcher" role="group" aria-label="Banner format">
+  <span class="sb-switcher__label">format</span>
+  <button class="sb-switcher__btn is-active" data-format="twitter" data-w="1500" data-h="500">twitter / x · 1500×500</button>
+  <button class="sb-switcher__btn" data-format="og" data-w="1200" data-h="630">og / share · 1200×630</button>
+  <button class="sb-switcher__btn" data-format="linkedin" data-w="1584" data-h="396">linkedin · 1584×396</button>
+  <button class="sb-switcher__btn" data-format="hf" data-w="1280" data-h="640">hugging face · 1280×640</button>
+  <span class="sb-switcher__dim" id="sb-scale-readout">100%</span>
+</div>
+
+<!-- ------------------------------------------------------------------ -->
+<!-- Logo contact-sheet.                                                -->
+<!-- Four tiles, each a 1:1 export stage for one of the SVG variants    -->
+<!-- shipped in img/. Sized to match the source viewBox so screenshots  -->
+<!-- come out at exactly the right pixel dimensions. Order: standalone  -->
+<!-- mark → square lockup → square mark on a white plate → wide         -->
+<!-- rectangular lockup.                                                -->
+<!-- ------------------------------------------------------------------ -->
+<div class="sb-section-label">
+  <span>logo · brand marks</span>
+  <span class="sb-section-label__hint">img/logo-*.svg · screenshot at 100% for 1:1 export</span>
+</div>
+
+<div class="sb-logos" id="sb-logos">
+
+  <!-- Standalone mark — the 110×110 hex symbol on its own, with no
+       wordmark. This is the favicon and the model-card thumbnail used
+       in the banner identity strip above. -->
+  <figure class="sb-logo-card">
+    <div class="sb-logo-stage sb-logo-stage--mark">
+      <img src="/img/logo.svg" alt="Carbon mark, hex symbol only">
+    </div>
+    <figcaption class="sb-logo-meta">
+      <span class="sb-logo-meta__name" title="logo.svg">logo.svg</span>
+      <button type="button" class="sb-logo-meta__copy" data-copy="/img/logo.svg">copy</button>
+    </figcaption>
+  </figure>
+
+  <figure class="sb-logo-card">
+    <div class="sb-logo-stage sb-logo-stage--square">
+      <img src="/img/logo-square.svg" alt="Carbon square lockup, symbol over wordmark">
+    </div>
+    <figcaption class="sb-logo-meta">
+      <span class="sb-logo-meta__name" title="logo-square.svg">logo-square.svg</span>
+      <button type="button" class="sb-logo-meta__copy" data-copy="/img/logo-square.svg">copy</button>
+    </figcaption>
+  </figure>
+
+  <!-- Square mark with a built-in white backplate (file ships its own
+       white polygon under the symbol). The stage sits on the same cream
+       paper as the other tiles so the white square reads as a distinct
+       lockup against the page, not just a hole in the cream. -->
+  <figure class="sb-logo-card">
+    <div class="sb-logo-stage sb-logo-stage--square">
+      <img src="/img/logo-square-white-background.svg" alt="Carbon square mark on a white plate">
+    </div>
+    <figcaption class="sb-logo-meta">
+      <span class="sb-logo-meta__name" title="logo-square-white-background.svg">logo-square-white-background.svg</span>
+      <button type="button" class="sb-logo-meta__copy" data-copy="/img/logo-square-white-background.svg">copy</button>
+    </figcaption>
+  </figure>
+
+  <figure class="sb-logo-card">
+    <div class="sb-logo-stage sb-logo-stage--rectangle">
+      <img src="/img/logo-rectangle.svg" alt="Carbon horizontal lockup, symbol next to wordmark">
+    </div>
+    <figcaption class="sb-logo-meta">
+      <span class="sb-logo-meta__name" title="logo-rectangle.svg">logo-rectangle.svg</span>
+      <button type="button" class="sb-logo-meta__copy" data-copy="/img/logo-rectangle.svg">copy</button>
+    </figcaption>
+  </figure>
+
+</div>
+
+<!-- ------------------------------------------------------------------ -->
+<!-- SEO / social-share thumbnail.                                      -->
+<!-- Composed in HTML so the lockup tracks edits to logo-rectangle.svg  -->
+<!-- automatically: screenshot the stage at 100% and drop the PNG into  -->
+<!-- img/thumb.png. The stage is sized at the canonical 1200×630        -->
+<!-- social-card ratio so the export drops straight into demo.html's    -->
+<!-- og:image + twitter:image meta tags. Marked data-static so the helix-->
+<!-- renders a single frozen frame instead of animating — keeps the     -->
+<!-- screenshot deterministic and frees the rAF loop.                   -->
+<!-- ------------------------------------------------------------------ -->
+<div class="sb-section-label">
+  <span>seo · share thumbnail</span>
+  <span class="sb-section-label__hint">1200×630 · screenshot at 100% and drop into img/thumb.png</span>
+</div>
+
+<div class="sb-thumbs" id="sb-thumbs">
+
+  <figure class="sb-logo-card">
+    <div class="sb-logo-stage sb-logo-stage--og">
+      <header class="carbon-banner" data-static aria-label="Carbon OG share thumbnail">
+        <div class="banner-inner">
+          <div class="banner-left">
+
+            <div class="banner-identity">
+              <a class="logo-card" href="#" aria-label="Carbon, go to top">
+                <img class="logo-img" src="/img/logo.svg" alt="" width="44" height="44">
+              </a>
+              <div class="banner-breadcrumb">
+                <div class="banner-title">CARBON</div>
+                <div class="banner-path">huggingfacebio/carbon-3b</div>
+              </div>
+            </div>
+
+            <div class="banner-headline">
+              <h1 class="banner-wordmark"><span>CARBON</span><span class="banner-cursor" aria-hidden="true"></span></h1>
+              <p class="banner-subtitle">Autoregressive Genomic Foundation Model</p>
+              <ul class="banner-specs" aria-label="Model specs">
+                <li class="banner-spec"><strong>393,216</strong> bp context</li>
+                <li class="banner-spec"><strong>6-mer</strong> tokenizer</li>
+                <li class="banner-spec"><strong>1T</strong> train tokens</li>
+              </ul>
+            </div>
+
+          </div>
+
+          <div class="banner-helix" aria-hidden="true">
+            <canvas class="cb-helix-canvas"></canvas>
+          </div>
+        </div>
+      </header>
+    </div>
+  </figure>
+
+</div>
+
+<!-- ------------------------------------------------------------------ -->
+<!-- Model card covers.                                                 -->
+<!-- Three variants of the OG thumbnail, one per published checkpoint   -->
+<!-- (500M / 3B / 8B). The composition is identical to the share thumb  -->
+<!-- above — same 1200×630 OG ratio, same static banner, same helix —   -->
+<!-- the only thing that changes is the breadcrumb path in the identity -->
+<!-- strip so it reads as the cover for THAT model. Screenshot each one -->
+<!-- at 100% and upload as the model-card thumbnail on the Hub.         -->
+<!-- ------------------------------------------------------------------ -->
+<div class="sb-section-label">
+  <span>model · card covers</span>
+  <span class="sb-section-label__hint">huggingfacebio/carbon-{500m,3b,8b} · 1200×630 · screenshot each at 100%</span>
+</div>
+
+<div class="sb-thumbs" id="sb-model-cards">
+
+  <figure class="sb-logo-card">
+    <div class="sb-logo-stage sb-logo-stage--og">
+      <header class="carbon-banner" data-static aria-label="Carbon-500M model card cover">
+        <div class="banner-inner">
+          <div class="banner-left">
+
+            <div class="banner-identity">
+              <a class="logo-card" href="#" aria-label="Carbon, go to top">
+                <img class="logo-img" src="/img/logo.svg" alt="" width="44" height="44">
+              </a>
+              <div class="banner-breadcrumb">
+                <div class="banner-title">CARBON</div>
+                <div class="banner-path">huggingfacebio/carbon-500m</div>
+              </div>
+            </div>
+
+            <div class="banner-headline">
+              <h1 class="banner-wordmark"><span>CARBON</span><span class="banner-cursor" aria-hidden="true"></span></h1>
+              <p class="banner-subtitle">Autoregressive Genomic Foundation Model</p>
+              <ul class="banner-specs" aria-label="Model specs">
+                <li class="banner-spec"><strong>49,152</strong> bp context</li>
+                <li class="banner-spec"><strong>6-mer</strong> tokenizer</li>
+                <li class="banner-spec"><strong>1T</strong> train tokens</li>
+              </ul>
+            </div>
+
+          </div>
+
+          <div class="banner-helix" aria-hidden="true">
+            <canvas class="cb-helix-canvas"></canvas>
+          </div>
+        </div>
+      </header>
+    </div>
+  </figure>
+
+  <figure class="sb-logo-card">
+    <div class="sb-logo-stage sb-logo-stage--og">
+      <header class="carbon-banner" data-static aria-label="Carbon-3B model card cover">
+        <div class="banner-inner">
+          <div class="banner-left">
+
+            <div class="banner-identity">
+              <a class="logo-card" href="#" aria-label="Carbon, go to top">
+                <img class="logo-img" src="/img/logo.svg" alt="" width="44" height="44">
+              </a>
+              <div class="banner-breadcrumb">
+                <div class="banner-title">CARBON</div>
+                <div class="banner-path">huggingfacebio/carbon-3b</div>
+              </div>
+            </div>
+
+            <div class="banner-headline">
+              <h1 class="banner-wordmark"><span>CARBON</span><span class="banner-cursor" aria-hidden="true"></span></h1>
+              <p class="banner-subtitle">Autoregressive Genomic Foundation Model</p>
+              <ul class="banner-specs" aria-label="Model specs">
+                <li class="banner-spec"><strong>393,216</strong> bp context</li>
+                <li class="banner-spec"><strong>6-mer</strong> tokenizer</li>
+                <li class="banner-spec"><strong>1T</strong> train tokens</li>
+              </ul>
+            </div>
+
+          </div>
+
+          <div class="banner-helix" aria-hidden="true">
+            <canvas class="cb-helix-canvas"></canvas>
+          </div>
+        </div>
+      </header>
+    </div>
+  </figure>
+
+  <figure class="sb-logo-card">
+    <div class="sb-logo-stage sb-logo-stage--og">
+      <header class="carbon-banner" data-static aria-label="Carbon-8B model card cover">
+        <div class="banner-inner">
+          <div class="banner-left">
+
+            <div class="banner-identity">
+              <a class="logo-card" href="#" aria-label="Carbon, go to top">
+                <img class="logo-img" src="/img/logo.svg" alt="" width="44" height="44">
+              </a>
+              <div class="banner-breadcrumb">
+                <div class="banner-title">CARBON</div>
+                <div class="banner-path">huggingfacebio/carbon-8b</div>
+              </div>
+            </div>
+
+            <div class="banner-headline">
+              <h1 class="banner-wordmark"><span>CARBON</span><span class="banner-cursor" aria-hidden="true"></span></h1>
+              <p class="banner-subtitle">Autoregressive Genomic Foundation Model</p>
+              <ul class="banner-specs" aria-label="Model specs">
+                <li class="banner-spec"><strong>786,432</strong> bp context</li>
+                <li class="banner-spec"><strong>6-mer</strong> tokenizer</li>
+                <li class="banner-spec"><strong>1T</strong> train tokens</li>
+              </ul>
+            </div>
+
+          </div>
+
+          <div class="banner-helix" aria-hidden="true">
+            <canvas class="cb-helix-canvas"></canvas>
+          </div>
+        </div>
+      </header>
+    </div>
+  </figure>
+
+</div>
+
+<!-- Helix animation. Same script as the main demo — it queries
+     .carbon-banner + .cb-helix-canvas, both of which exist here. -->
+<script src="/assets/js/banner.js"></script>
+
+<script>
+  // ----------------------------------------------------------------
+  // Format switcher + auto-fit-to-viewport.
+  //
+  // The .social-banner-stage carries the EXACT social-media canvas
+  // dimensions (1500×500 for a Twitter header, etc). On a screen that
+  // can't physically fit that many pixels we don't want a scrollbar —
+  // we want the banner to scale down uniformly so it stays centred and
+  // fully visible. We compute the largest scale that fits both axes
+  // inside the viewport (minus some breathing room for the switcher
+  // row) and apply it via CSS transform.
+  // ----------------------------------------------------------------
+  (function initSocialBanner() {
+    const stage = document.getElementById("sb-stage");
+    const readout = document.getElementById("sb-scale-readout");
+    const buttons = document.querySelectorAll(".sb-switcher__btn");
+    // Contact-sheet rows below the banner that need to auto-fit when
+    // the viewport is narrower than their native row width (the logo
+    // tiles total ~1015px, the OG thumbnail tile is 1153px wide on its
+    // own). Each row gets its scale CSS var written to it independently.
+    const fitRows = document.querySelectorAll(".sb-logos, .sb-thumbs");
+
+    // Horizontal breathing room (body padding both sides).
+    const CHROME_H = 80;
+    // Vertical breathing room reserved for the format switcher row +
+    // body padding + the section label above the logo contact-sheet.
+    // The fit-to-viewport cap aims at making the banner sit comfortably
+    // above the contact-sheet without forcing a scrollbar on a 1080p
+    // screen, while still letting tall windows render at native 100%.
+    const CHROME_V = 160;
+
+    function fitStage() {
+      const w = parseFloat(getComputedStyle(stage).getPropertyValue("--sb-w"));
+      const h = parseFloat(getComputedStyle(stage).getPropertyValue("--sb-h"));
+      const availW = Math.max(200, window.innerWidth  - CHROME_H);
+      const availH = Math.max(200, window.innerHeight - CHROME_V);
+      const scale = Math.min(1, availW / w, availH / h);
+      stage.style.setProperty("--sb-scale", scale.toFixed(4));
+      readout.textContent = Math.round(scale * 100) + "%";
+      fitContactSheet();
+    }
+
+    // Scale each contact-sheet row down when the viewport is narrower
+    // than the row at 100%. Done per-row so the logo strip and the OG
+    // thumbnail (which has very different natural widths) each get a
+    // fit factor sized to themselves, instead of one global shrink
+    // that would over-shrink the smaller row.
+    function fitContactSheet() {
+      const avail = Math.max(200, window.innerWidth - CHROME_H);
+      fitRows.forEach(row => {
+        row.style.setProperty("--sb-row-scale", "1");
+        const natural = row.scrollWidth;
+        const s = Math.min(1, avail / natural);
+        row.style.setProperty("--sb-row-scale", s.toFixed(4));
+      });
+    }
+
+    function setFormat(btn) {
+      buttons.forEach(b => b.classList.toggle("is-active", b === btn));
+      const w = btn.dataset.w + "px";
+      const h = btn.dataset.h + "px";
+      stage.style.setProperty("--sb-w", w);
+      stage.style.setProperty("--sb-h", h);
+      // Reflect in the URL so a chosen format is shareable / bookmarkable.
+      const url = new URL(window.location);
+      url.searchParams.set("format", btn.dataset.format);
+      window.history.replaceState(null, "", url);
+      // Wait one frame so the new --sb-w/--sb-h are applied before we
+      // measure for the fit-to-viewport calculation.
+      requestAnimationFrame(() => {
+        fitStage();
+        // Nudge the canvas to resize against its new CSS box. The
+        // banner.js ResizeObserver should catch this on its own, but
+        // firing a synthetic resize is a cheap belt-and-braces.
+        window.dispatchEvent(new Event("resize"));
+      });
+    }
+
+    buttons.forEach(btn => btn.addEventListener("click", () => setFormat(btn)));
+
+    // Restore from URL query (?format=twitter / og / linkedin / hf).
+    const initial = new URL(window.location).searchParams.get("format");
+    if (initial) {
+      const match = Array.from(buttons).find(b => b.dataset.format === initial);
+      if (match) setFormat(match);
+    }
+
+    fitStage();
+    window.addEventListener("resize", fitStage);
+
+    // Wire up the discreet "copy" buttons under each logo tile so the
+    // asset path can be grabbed in one click. Falls back gracefully on
+    // browsers / contexts where the async clipboard API is unavailable
+    // (e.g. http:// origins) by showing a "failed" pill briefly.
+    document.querySelectorAll(".sb-logo-meta__copy").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const value = btn.dataset.copy || "";
+        if (!value) return;
+        const original = btn.textContent;
+        try {
+          await navigator.clipboard.writeText(value);
+          btn.textContent = "copied";
+          btn.classList.add("is-copied");
+        } catch {
+          btn.textContent = "failed";
+        }
+        setTimeout(() => {
+          btn.textContent = original;
+          btn.classList.remove("is-copied");
+        }, 1100);
+      });
+    });
+  })();
+</script>
+
+</body>
+</html>

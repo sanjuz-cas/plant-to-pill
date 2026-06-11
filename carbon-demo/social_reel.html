@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carbon · social reel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap">
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --ink-soft: #5b5b56;
+    --paper: #fafafa;
+    --green: #1a8a3a;
+    --rule: #e3e1d6;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    background: #000;
+    color: #fff;
+    font-family: "Inter", system-ui, sans-serif;
+    overflow: hidden;
+  }
+
+  /* Frameless: the stage fills the entire viewport. Resize the
+     browser window to whatever aspect ratio you want to record. */
+  .stage {
+    position: absolute;
+    inset: 0;
+    background: #f7f5ee;
+  }
+  .stage-frame {
+    position: absolute;
+    inset: 0;
+    background: #f7f5ee;  /* matches the demo body so a clipped iframe
+                             blends seamlessly with the stage frame. */
+    overflow: hidden;
+  }
+
+  iframe.demo {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    border: 0;
+  }
+
+  /* Scene-to-scene slide animation lives on .stage-frame (which carries
+     both iframes). The previous frame slides up off the top, content
+     swaps off-screen, the new frame slides in from below. */
+  .stage-frame { will-change: transform; }
+  .stage-frame.slide-out {
+    transition: transform 420ms cubic-bezier(.4, 0, .2, 1);
+    transform: translateY(-100%);
+  }
+  .stage-frame.slide-prep {
+    transition: none;
+    transform: translateY(100%);
+  }
+  .stage-frame.slide-in {
+    transition: transform 420ms cubic-bezier(.4, 0, .2, 1);
+    transform: translateY(0);
+  }
+
+  /* Two iframes share the stage; we toggle which one is visible per
+     scene. The banner one points at /social-banner — a dedicated hero
+     page that already centers the banner inside its own viewport, so
+     we don't have to crop or scale anything ourselves. */
+  iframe.demo { z-index: 1; }
+  /* Banner/demo swap is hidden behind the .stage-frame slide (the
+     change happens off-screen between slide-out and slide-in), so the
+     opacity flip can be instant — a cross-fade here would overlap the
+     slide motion and read as a double animation. */
+  iframe.banner-iframe { z-index: 2; opacity: 0; pointer-events: none; }
+  iframe.banner-iframe.active { opacity: 1; pointer-events: auto; }
+  iframe.demo:not(.banner-iframe).hidden { opacity: 0; }
+
+  /* "Now playing" progress dots at the top. */
+  .timeline {
+    position: absolute;
+    top: 18px; left: 32px; right: 32px;
+    z-index: 5;
+    display: flex; gap: 6px;
+    pointer-events: none;
+  }
+  .timeline .dot {
+    flex: 1; height: 2px; background: rgba(0,0,0,0.12); border-radius: 1px;
+    overflow: hidden;
+  }
+  .timeline .dot::before {
+    content: ""; display: block; height: 100%; width: 0%;
+    background: var(--ink);
+    transition: width .2s linear;
+  }
+  .timeline .dot.done::before { width: 100% !important; }
+
+  /* Quiet "→" hint that fades in once the scene has settled, telling
+     the recorder they can advance whenever ready. */
+  .ready-hint {
+    position: absolute; right: 24px; bottom: 18px; z-index: 5;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 20px; color: rgba(0,0,0,0.45);
+    opacity: 0; transition: opacity .8s ease;
+    pointer-events: none;
+    animation: nudge 1.8s ease-in-out infinite;
+  }
+  .ready-hint.show { opacity: 1; }
+  @keyframes nudge {
+    0%, 100% { transform: translateX(0); }
+    50%      { transform: translateX(4px); }
+  }
+
+  /* Controls (hidden during recording with H). */
+  .controls {
+    position: fixed; top: 12px; right: 12px; z-index: 50;
+    display: flex; gap: 8px; align-items: center;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11px; color: #ccc;
+    background: rgba(0,0,0,0.55);
+    padding: 8px 10px; border-radius: 6px;
+    border: 1px solid rgba(255,255,255,0.1);
+    backdrop-filter: blur(6px);
+  }
+  .controls.hidden { opacity: 0; pointer-events: none; }
+  .controls button, .controls select {
+    font-family: inherit; font-size: 11px;
+    background: #1a1a1a; color: #eee;
+    border: 1px solid #444; border-radius: 3px;
+    padding: 4px 8px; cursor: pointer;
+  }
+  .controls button:hover { border-color: #888; }
+  .controls .hint { color: #888; font-size: 10px; }
+  .controls label.auto {
+    display: flex; align-items: center; gap: 5px;
+    color: #ccc; font-size: 11px;
+    padding: 4px 8px; border: 1px solid #444; border-radius: 3px;
+    cursor: pointer;
+  }
+  .controls label.auto input { margin: 0; cursor: pointer; }
+
+  /* Hint banner shown briefly on load. */
+  .toast {
+    position: fixed; left: 50%; bottom: 20px;
+    transform: translateX(-50%);
+    z-index: 60;
+    background: rgba(0,0,0,0.7);
+    color: #fff; padding: 8px 14px; border-radius: 4px;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11px; letter-spacing: 0.06em;
+    opacity: 0; transition: opacity .4s ease;
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body data-aspect="16-9">
+
+<div class="controls" id="controls">
+  <button id="play">▶ play</button>
+  <button id="restart">↺ restart</button>
+  <label class="auto"><input type="checkbox" id="auto-toggle"> auto</label>
+  <span class="hint">H: hide · ←/→: scene · space: pause</span>
+</div>
+
+<div class="toast" id="toast">press H to hide controls · → advances scenes</div>
+
+<div class="stage">
+  <div class="stage-frame">
+    <iframe class="demo" id="demo" src="/demo" title="Carbon demo"></iframe>
+    <iframe class="demo banner-iframe" id="banner" src="/social-banner?format=og" title="Carbon hero"></iframe>
+
+    <div class="timeline" id="timeline"></div>
+    <div class="ready-hint" id="ready-hint">→</div>
+  </div>
+</div>
+
+<script>
+// =============================================================
+// Scene list — each entry drives one beat of the reel: switch to a
+// tab, scroll to a target element, hold for `duration` ms, then
+// slide-transition to the next scene.
+// =============================================================
+// useBanner: show the dedicated /social-banner iframe (a centred hero
+// with no surrounding chrome) instead of the full demo. Used for the
+// opening scene so the title shot is purpose-built and centred in the
+// frame rather than cropped from the live demo.
+//
+// scrollOffset: extra whitespace above the scrolled-to section so the
+// widget below sits comfortably in the lower part of the frame instead
+// of being flush against the top edge.
+const SCENES = [
+  { kind: "scene", useBanner: true,                          duration: 6000 },
+  { kind: "scene", tab: "dna-lab", scrollTo: "#completion",  scrollOffset: 120, duration: 6000 },
+  { kind: "scene", tab: "dna-lab", scrollTo: "#track",       scrollOffset: 120, duration: 6000 },
+  { kind: "scene", tab: "dna-lab", scrollTo: "#vep",         scrollOffset: 120, duration: 6000 },
+  { kind: "scene", tab: "dna-lab", scrollTo: "#species",     scrollOffset: 120, duration: 6000 },
+  { kind: "scene", tab: "dna-lab", scrollTo: "#folding",     scrollOffset: 120, duration: 6000 },
+  { kind: "scene", tab: "dna-lab", scrollTo: "#umap",        scrollOffset: 120, duration: 6000 },
+  { kind: "scene", tab: "dna-lab", scrollTo: "#speciesTree", scrollOffset: 120, duration: 6000 },
+];
+
+// Default to manual advance so the recorder can interact with each
+// widget for as long as they want before moving on. Flip to true (or
+// toggle "auto" in the controls) for hands-free playback.
+let autoAdvance = false;
+
+// --- helpers --------------------------------------------------
+const $ = (id) => document.getElementById(id);
+const iframe = $("demo");
+const banner = $("banner");
+const timeline = $("timeline");
+
+// Once /social-banner has loaded: hide its format switcher, drop the
+// outer cream "canvas" framing (body bg, body padding, box-shadow),
+// and override the scale so the banner fills the iframe edge-to-edge
+// instead of being clamped to its natural pixel size. Same-origin so
+// direct DOM access is allowed.
+banner.addEventListener("load", () => {
+  try {
+    const doc = banner.contentDocument;
+    const win = banner.contentWindow;
+    if (!doc || !win) return;
+
+    const sw = doc.querySelector(".sb-switcher");
+    if (sw) sw.style.display = "none";
+
+    const style = doc.createElement("style");
+    style.textContent = `
+      html, body {
+        background: #f7f5ee !important;
+        padding: 0 !important;
+        gap: 0 !important;
+        overflow: hidden !important;
+      }
+      /* Banner is the only body child in the reel; center it vertically
+         so any leftover slack (when the iframe aspect ratio doesn't match
+         the banner's) reads as symmetric letterbox margins rather than a
+         lone blank rectangle stacked below the banner. */
+      body { justify-content: center !important; }
+      .social-banner-stage { box-shadow: none !important; }
+      /* The reel only frames the banner stage; the brand contact-sheet
+         and OG thumbnail strip below it are out of scope for the tour. */
+      .sb-section-label,
+      .sb-logos,
+      .sb-thumbs { display: none !important; }
+    `;
+    doc.head.appendChild(style);
+
+    // Reel mode: instead of scaling a fixed-ratio stage into the
+    // iframe (which either letterboxes or crops, depending on Math.min
+    // vs Math.max), we override the stage dimensions to match the
+    // iframe exactly and keep scale at 1×. The banner's internal grid
+    // (wordmark left, helix right) reflows to the iframe's actual
+    // aspect ratio, so the helix and dot-paper background extend to
+    // every edge without cropping the wordmark.
+    const stage = doc.getElementById("sb-stage");
+    if (stage) {
+      const fit = () => {
+        stage.style.setProperty("--sb-w", win.innerWidth + "px");
+        stage.style.setProperty("--sb-h", win.innerHeight + "px");
+        stage.style.setProperty("--sb-scale", "1");
+      };
+      fit();
+      win.addEventListener("resize", fit);
+      // The parent reel page can also change the iframe size (e.g. when
+      // the browser window is resized); listen there too.
+      window.addEventListener("resize", fit);
+    }
+  } catch {}
+});
+
+// Inject reel-only styles into the demo iframe. Two jobs:
+//   1. Hide the "Try it / What to look for" callouts (.takeaway) and
+//      "Run this from code" expandables (details.code-snippet) site-
+//      wide so each scene shows just the widget.
+//   2. When body.reel-mode is active, hide *everything* except the
+//      one section flagged with .reel-current, and centre that
+//      section vertically in the viewport. This stops the next
+//      section peeking in below and keeps the widget on-screen.
+// Only this iframe instance is affected — the live demo at /demo is
+// untouched if you navigate there directly.
+iframe.addEventListener("load", () => {
+  try {
+    const d = iframe.contentDocument;
+    if (!d) return;
+    const style = d.createElement("style");
+    style.textContent = `
+      .takeaway,
+      details.code-snippet { display: none !important; }
+
+      /* --- reel-mode: single-widget viewport ----------------------- */
+      body.reel-mode {
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+      body.reel-mode > header.carbon-banner,
+      body.reel-mode > #tab-nav-sticky,
+      body.reel-mode > footer { display: none !important; }
+      body.reel-mode > .tab-panel { display: none !important; }
+      body.reel-mode > .tab-panel.active { display: block !important; }
+
+      body.reel-mode .tab-panel.active > .tab-lede { display: none !important; }
+      body.reel-mode .tab-panel.active .container.wide {
+        min-height: 100vh;
+        max-width: none;
+        /* Generous side padding so the section narrative + widget have
+           breathing room from the viewport edges. */
+        padding: 32px 96px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-sizing: border-box;
+      }
+      body.reel-mode section.section--two-col { display: none !important; }
+      body.reel-mode section.section--two-col.reel-current {
+        display: grid !important;
+        width: 100%;
+        margin: 0 !important;
+        scroll-margin-top: 0 !important;
+        /* Optical-centre nudge: the section's narrative + widget reads
+           better seated slightly above true centre, with a touch more
+           paper visible below. */
+        transform: translateY(-50px);
+      }
+      /* The narrative rail is normally sticky under the page header;
+         in reel-mode there is no scroll, so park it back to static so
+         it sits next to the demo body instead of jumping to top:104px. */
+      body.reel-mode .section--two-col.reel-current .section-narrative {
+        position: static !important;
+        top: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
+      }
+    `;
+    d.head.appendChild(style);
+  } catch {}
+});
+
+let idx = -1;
+let timer = null;
+let progressTimer = null;
+let paused = false;
+let progressStart = 0;
+let progressDur = 0;
+let started = false;
+
+function buildTimeline() {
+  timeline.innerHTML = SCENES.map(() => `<div class="dot"></div>`).join("");
+}
+
+const stageFrame = document.querySelector(".stage-frame");
+const SLIDE_MS = 420;
+
+// Slide transition. Drives .stage-frame (which holds both iframes) up
+// off the top, applies the new scene's content while off-screen,
+// snaps to translateY(100%), then slides back to translateY(0).
+// applyScene runs after the slide-out, so the user only sees the new
+// content emerge from the bottom.
+function slideToNext(applyScene, then) {
+  stageFrame.classList.remove("slide-prep", "slide-in");
+  stageFrame.classList.add("slide-out");
+  setTimeout(() => {
+    applyScene();
+    // Brief settle window so the iframe's tab swap + scrollTo finish
+    // off-screen before the slide-in starts — otherwise the new scene
+    // re-lays-out mid-slide and reads as a layout flash.
+    setTimeout(() => {
+      stageFrame.classList.remove("slide-out");
+      stageFrame.classList.add("slide-prep");
+      void stageFrame.offsetWidth;
+      requestAnimationFrame(() => {
+        stageFrame.classList.remove("slide-prep");
+        stageFrame.classList.add("slide-in");
+        if (then) setTimeout(then, SLIDE_MS);
+      });
+    }, 180);
+  }, SLIDE_MS);
+}
+
+// Drive the iframe: switch tabs, scroll to an element, trigger actions.
+function driveIframe(scene) {
+  const win = iframe.contentWindow;
+  const doc = iframe.contentDocument;
+  if (!doc || !win) return;
+
+  // Tab switch. The demo exposes window.setTab; fall back to clicking
+  // the tab button if it isn't there for any reason.
+  if (scene.tab) {
+    if (typeof win.setTab === "function") {
+      // scroll:false so the demo doesn't snap to top; we drive scroll
+      // ourselves a tick later. updateHash:false so we don't churn URL
+      // history with every scene.
+      win.setTab(scene.tab, { scroll: false, updateHash: false });
+    } else {
+      const btn = doc.querySelector(`#tab-nav .tab[data-tab="${scene.tab}"]`);
+      if (btn) btn.click();
+    }
+  }
+
+  // Give the tab a tick to render before scrolling.
+  setTimeout(() => {
+    if (scene.scrollTo === "top") {
+      // Used by intro scenes (which are now served by the banner
+      // iframe, so this branch is just a safety net).
+      doc.body.classList.remove("reel-mode");
+      win.scrollTo({ top: 0, behavior: "auto" });
+    } else if (typeof scene.scrollTo === "string" && scene.scrollTo.startsWith("#")) {
+      // Single-widget viewport: hide every other section and centre
+      // this one. No actual scrolling — the CSS centres it in 100vh.
+      doc.body.classList.add("reel-mode");
+      doc.querySelectorAll("section.section--two-col.reel-current")
+         .forEach(s => s.classList.remove("reel-current"));
+      const el = doc.querySelector(scene.scrollTo);
+      if (el) {
+        el.classList.add("reel-current");
+        win.scrollTo({ top: 0, behavior: "auto" });
+        // Nudge widgets whose layout depends on a ResizeObserver /
+        // window resize — e.g. the §6 UMAP WebGL canvas — to re-fit
+        // against their newly-visible bounding rect.
+        win.dispatchEvent(new Event("resize"));
+      }
+    }
+
+  }, 60);
+}
+
+function startProgress(durMs) {
+  const dot = timeline.children[idx];
+  if (!dot) return;
+  progressStart = performance.now();
+  progressDur = durMs;
+  const inner = dot.firstElementChild || dot; // dot uses ::before; animate inline
+  // We can't drive ::before width via JS, so apply width to the dot itself
+  // through a CSS variable + a child element.
+  dot.style.setProperty("--p", "0%");
+  // Use a real child for fill so it animates.
+  if (!dot.querySelector(".fill")) {
+    dot.innerHTML = `<div class="fill" style="height:100%;width:0%;background:#1a1a1a"></div>`;
+  }
+  const fill = dot.querySelector(".fill");
+  clearInterval(progressTimer);
+  progressTimer = setInterval(() => {
+    if (paused) return;
+    const t = Math.min(1, (performance.now() - progressStart) / progressDur);
+    fill.style.width = (t * 100).toFixed(1) + "%";
+    if (t >= 1) {
+      clearInterval(progressTimer);
+      dot.classList.add("done");
+    }
+  }, 33);
+}
+
+function pauseProgress() {
+  paused = true;
+  clearTimeout(timer);
+}
+function resumeProgress() {
+  if (!paused) return;
+  paused = false;
+  // Resume the remaining slice of the current scene.
+  const elapsed = performance.now() - progressStart;
+  const remaining = Math.max(0, progressDur - elapsed);
+  timer = setTimeout(nextScene, remaining);
+}
+
+// Move to the next scene.
+function nextScene() {
+  clearTimeout(timer);
+  clearInterval(progressTimer);
+  idx++;
+  if (idx >= SCENES.length) { finish(); return; }
+  const s = SCENES[idx];
+
+  // Hide the "ready, press → " hint from the previous scene.
+  $("ready-hint").classList.remove("show");
+
+  // Swap iframe / drive scene state. Called from inside the slide
+  // transition so the content change is hidden off-screen.
+  const applyScene = () => {
+    if (s.useBanner) {
+      banner.classList.add("active");
+    } else {
+      banner.classList.remove("active");
+      driveIframe(s);
+    }
+  };
+
+  // First scene: no previous frame to slide out — just apply and
+  // start counting. Subsequent scenes use the up-then-from-below slide.
+  const onLanded = () => {
+    startProgress(s.duration);
+    if (autoAdvance) {
+      timer = setTimeout(nextScene, s.duration);
+    } else {
+      // Subtle "press → for next" hint, surfaces once the scene has
+      // had a moment to settle so the recorder knows it can advance.
+      setTimeout(() => {
+        if (!autoAdvance) $("ready-hint").classList.add("show");
+      }, s.duration);
+    }
+  };
+
+  if (idx === 0) {
+    applyScene();
+    // Give the iframe content one tick to lay out before timing starts.
+    setTimeout(onLanded, 200);
+  } else {
+    slideToNext(applyScene, onLanded);
+  }
+}
+
+function finish() {
+  // End of reel: leave the last scene on screen. User can hit restart.
+}
+
+function restart() {
+  clearTimeout(timer);
+  clearInterval(progressTimer);
+  // Reset all dots
+  Array.from(timeline.children).forEach(d => {
+    d.classList.remove("done");
+    d.innerHTML = "";
+  });
+  stageFrame.classList.remove("slide-out", "slide-prep", "slide-in");
+  idx = -1;
+  paused = false;
+  nextScene();
+}
+
+function skipForward() {
+  clearTimeout(timer);
+  clearInterval(progressTimer);
+  if (idx >= 0 && idx < timeline.children.length) {
+    timeline.children[idx].classList.add("done");
+  }
+  nextScene();
+}
+
+function skipBackward() {
+  clearTimeout(timer);
+  clearInterval(progressTimer);
+  idx = Math.max(-1, idx - 2);
+  nextScene();
+}
+
+// --- wiring ---------------------------------------------------
+buildTimeline();
+
+$("play").addEventListener("click", () => {
+  if (!started) {
+    started = true;
+    restart();
+    $("play").textContent = "⏸ pause";
+  } else if (paused) {
+    resumeProgress();
+    $("play").textContent = "⏸ pause";
+  } else {
+    pauseProgress();
+    $("play").textContent = "▶ resume";
+  }
+});
+
+$("restart").addEventListener("click", () => {
+  started = true;
+  $("play").textContent = "⏸ pause";
+  restart();
+});
+
+$("auto-toggle").addEventListener("change", (e) => {
+  autoAdvance = e.target.checked;
+  // If enabling mid-scene, kick off an auto-advance for the remainder
+  // of this scene's duration. (Cheap implementation: just nudge to the
+  // next scene immediately — fancier would resume from the elapsed
+  // ken-burns position.)
+  if (autoAdvance && idx >= 0) {
+    $("ready-hint").classList.remove("show");
+    clearTimeout(timer);
+    timer = setTimeout(skipForward, 600);
+  }
+});
+
+// Keyboard: H toggles chrome, arrows skip, space pauses, R restarts.
+function handleKey(e) {
+  if (e.key === "h" || e.key === "H") {
+    $("controls").classList.toggle("hidden");
+  } else if (e.key === "ArrowRight") {
+    e.preventDefault(); skipForward();
+  } else if (e.key === "ArrowLeft") {
+    e.preventDefault(); skipBackward();
+  } else if (e.key === " ") {
+    // Ignore space when the user is typing in an input/textarea —
+    // otherwise pressing space in a sandbox prompt would pause the
+    // reel instead of inserting a space.
+    const t = e.target;
+    const tag = t && t.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA" || (t && t.isContentEditable)) return;
+    e.preventDefault();
+    $("play").click();
+  } else if (e.key === "r" || e.key === "R") {
+    restart(); started = true;
+  }
+}
+document.addEventListener("keydown", handleKey);
+
+// Mirror the same handler inside each iframe so shortcuts keep working
+// after the user has clicked into the iframe (which moves keyboard
+// focus down into its document). Re-attached on every load() in case
+// the iframe navigates.
+function attachKeysToIframe(frame) {
+  frame.addEventListener("load", () => {
+    try {
+      frame.contentDocument?.addEventListener("keydown", handleKey);
+    } catch {}
+  });
+}
+attachKeysToIframe(iframe);
+attachKeysToIframe(banner);
+
+// Show the recording hint briefly.
+window.addEventListener("load", () => {
+  const t = $("toast");
+  t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 3500);
+});
+
+// Auto-start once the iframe content has had a moment to settle.
+iframe.addEventListener("load", () => {
+  // Small delay so fonts, helix canvas, and tab JS are ready.
+  setTimeout(() => {
+    if (!started) {
+      started = true;
+      $("play").textContent = "⏸ pause";
+      restart();
+    }
+  }, 800);
+});
+</script>
+</body>
+</html>

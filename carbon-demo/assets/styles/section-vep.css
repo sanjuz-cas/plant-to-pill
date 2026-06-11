@@ -1,0 +1,145 @@
+/* section-vep.css, §3 Variant effect predictor demo: two-row sequence
+   display (original above, click-editable mutation below) with per-row
+   log-likelihood scores, an inline verdict sentence, the merged
+   gene+variant description box, and the significance pills
+   (.sig-Pathogenic / Risk / Benign) that decorate the gene chips in
+   the toolbar. */
+
+/* --- VEP demo (§3): two-row sequence display + inline scores --- */
+.vep-window {
+  position: relative;                       /* anchors the .status pill below */
+  background: #f7f7f7; border: 1px solid #e0e0e0;
+  padding: 16px 20px; margin: 12px 0;
+  text-align: left;
+  /* The .vep-stack inside is an inline-grid whose middle column is a
+     60bp mono sequence (~550px wide). On narrow viewports that overflows
+     the window, so we let the window scroll horizontally as a single
+     unit. Critically, we do NOT introduce a line-break inside .seq-line
+     / .arrow-line (those keep `white-space: pre`) so the original row,
+     arrow row, and mutation row stay character-for-character aligned. */
+  overflow-x: auto;
+}
+/* "pending" pill in the top-right corner, aligned with the edit-hint row.
+   Lives as a direct child of .vep-window (outside the JS-rebuilt content
+   div) so it persists across re-renders. */
+.vep-window > .status {
+  position: absolute;
+  top: 16px; right: 20px;
+  margin-left: 0;
+  background: #f7f7f7;                      /* occludes any wrapped edit-hint */
+  z-index: 1;
+}
+.vep-window .vep-stack {
+  display: inline-grid;
+  grid-template-columns: auto auto auto;
+  align-items: center;
+  column-gap: 18px; row-gap: 4px;
+  text-align: left;
+  margin: 10px 0;
+}
+.vep-window .vep-label {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px; font-weight: 500;
+  color: #6b7a6e; text-transform: uppercase; letter-spacing: 1.2px;
+  white-space: nowrap;
+}
+.vep-window .vep-score {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px; font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+  color: #888;                                 /* "neutral" default */
+}
+.vep-window .vep-score.more-likely { color: #317f3f; }
+.vep-window .vep-score.less-likely { color: #bc2e25; }
+.vep-window .seq-line,
+.vep-window .arrow-line {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 14px; letter-spacing: 1px;
+  white-space: pre;
+  line-height: 1.4;
+}
+.vep-window .arrow-line { color: #bc2e25; font-weight: 700; line-height: 0.9; }
+.vep-window .seq-char { display: inline-block; }
+.vep-window .arrow-char { display: inline-block; width: auto; }
+/* Verdict sentence underneath the sequence block. */
+.vep-window .vep-verdict {
+  margin-top: 14px;
+  font-size: 13px; line-height: 1.55;
+  color: #333;
+  max-width: 760px;
+}
+.vep-window .vep-verdict .verdict-math {
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  color: #666;
+}
+.vep-window .vep-verdict .phrase-bad     { color: #bc2e25; font-weight: 600; }
+.vep-window .vep-verdict .phrase-good    { color: #317f3f; font-weight: 600; }
+.vep-window .vep-verdict .phrase-neutral { color: #444; font-weight: 600; }
+/* Variant position styling (the focus column in both rows) */
+.vep-window .seq-char.variant-pos { font-weight: 700; }
+/* In the mutation row, bases that differ from the original are red */
+.vep-window .seq-line.mutation .seq-char.differs { color: #bc2e25; font-weight: 700; }
+/* Editable mutation row */
+.vep-window .seq-line.editable .seq-char { cursor: pointer; }
+.vep-window .seq-line.editable .seq-char:hover {
+  background: rgba(188, 46, 37, 0.10);
+}
+.vep-window .original .seq-char { color: #1f1f1d; }
+.vep-window .original .seq-char.variant-pos { color: #1f1f1d; font-weight: 700; }
+/* Edit hint, above the stack */
+.vep-window .edit-hint {
+  margin-bottom: 12px;
+  text-align: left;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px; color: #888;
+  letter-spacing: 0.8px; text-transform: uppercase;
+}
+
+.pill.sig-Pathogenic { border-left: 3px solid #bc2e25; }
+.pill.sig-Risk       { border-left: 3px solid #e69500; }
+.pill.sig-Benign     { border-left: 3px solid #317f3f; }
+
+/* Merged gene + variant description block displayed above the demo
+   (replaces the old .gene-info green pill). The .meta-line below the
+   text is a single-line strip of (mutation location · base change ·
+   ClinVar label), all set in monospace for the technical feel. */
+.vep-gene-box {
+  margin: 4px 0 14px;
+  color: #333;
+  font-size: 13px; line-height: 1.55;
+}
+.vep-gene-box .vep-text { margin: 0; }
+.vep-gene-box .gene-name {
+  font-family: "JetBrains Mono", monospace;
+  font-weight: 600; color: #1f5024;
+  letter-spacing: 0.5px;
+}
+.vep-gene-box .variant-name {
+  font-family: "JetBrains Mono", monospace;
+  font-weight: 600; color: #1f1f1d;
+  letter-spacing: 0.3px;
+}
+/* Single-line meta strip under the gene/variant text (no divider). */
+.vep-gene-box .meta-line {
+  margin-top: 8px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  color: #1f1f1d;
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 22px;
+  align-items: baseline;
+}
+.vep-gene-box .meta-line .meta-item { white-space: nowrap; }
+.vep-gene-box .meta-line .meta-key {
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 10px;
+  margin-right: 6px;
+}
+.vep-gene-box .meta-line .meta-key::after { content: ":"; }

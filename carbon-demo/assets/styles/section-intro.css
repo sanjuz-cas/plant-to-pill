@@ -1,0 +1,1083 @@
+/* section-intro.css: Intro tab. Three blocks of content:
+   1) release announcement (reuses .tab-lede from layout.css)
+   2) tab-navigation guide (three big clickable cards: Demo / Model / Sandbox)
+   3) "From four letters to a protein" primer (5 stacked sub-rows that
+      each reuse .section--two-col + .section-narrative + .demo so they
+      look identical to §1-§7).
+
+   Only the visual atoms (.cd-mols / .cd-helix-wrap / .cd-gene-strip /
+   .cd-splice / .cd-translate / .cd-protein-3d) are intro-specific; they
+   intentionally do NOT carry their own backgrounds or borders, the
+   parent .demo card provides the white frame, same as everywhere else
+   on the page. The .section--intro class is applied to the panel itself
+   and serves only as a scope for shared CSS custom properties. */
+
+.section--intro {
+  /* Colour tokens, scoped so they don't leak outside the Intro tab. */
+  --ink:        #1f1f1d;
+  --ink-soft:   #5b5b56;
+  --ink-faint:  #8a8a83;
+  --rule:       #e3e1d6;
+  --green:      #317f3f;
+  --green-soft: rgba(49, 127, 63, 0.14);
+  --intron:     #b9b6a8;
+  --promoter:   #b8862c;
+  --promoter-soft: rgba(184, 134, 44, 0.18);
+}
+
+/* --- Hero · split layout -----------------------------------------------
+   Two-column variant of .tab-lede used by the Intro tab only. Editorial
+   composition: a centered text block on the left (eyebrow + big title +
+   short paragraph) parked next to the Pareto figure on the right. The
+   rail is vertically centered against the chart (align-items: center)
+   so neither side reads as anchored to the top edge — the two halves
+   share visual weight rather than fighting over it. The green left
+   rail accent inherited from .tab-lede__rail is dropped here: the title
+   already carries the editorial heft on its own.
+   Below 960px we collapse to one column; the chart needs the full
+   viewport width on narrow screens to stay readable. */
+.tab-lede--split {
+  display: grid;
+  /* 45 / 55 split between text rail and chart figure. The chart gets the
+     larger share so the Pareto plot keeps its decade ticks readable
+     without crushing the right-edge model labels. */
+  grid-template-columns: minmax(0, 40fr) minmax(0, 60fr);
+  column-gap: 56px;
+  align-items: center;
+  /* Hero claims at least half of the viewport so the announcement +
+     headline chart reads as a proper landing block, not a header that
+     visitors scroll past on the first pixel. The columns share this
+     height via align-items: center, so neither side anchors to the top
+     edge of the band. */
+  min-height: 50vh;
+}
+.tab-lede--split .tab-lede__rail {
+  /* Drop the sticky behaviour and the green left rail accent — the rail
+     centers itself vertically in its column (via the grid's
+     align-items: center on the parent) but the prose stays left-aligned
+     so the long title doesn't read as a centred slogan. */
+  position: static;
+  border-left: none;
+  padding: 0;
+  margin: 0 auto;
+  max-width: 520px;
+  text-align: left;
+}
+.tab-lede__title {
+  /* Editorial headline in JetBrains Mono — matches the technical-mono
+     register used elsewhere on the page (CARBON wordmark subtitle, the
+     §-section labels, the chart axis ticks). Mono is wider per glyph
+     than Inter so we drop one size step (36 → 32) to keep the line
+     length comparable. Weight 500 lands between the page body (400)
+     and the wordmark (700), giving the deck enough heft to read as
+     the headline of the tab without overpowering the chart on the right. */
+  margin: 0 0 22px;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 32px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  color: var(--ink);
+}
+.tab-lede--split .tab-lede__rail p {
+  margin: 0;
+  max-width: 460px;
+  font-size: 16px;
+  line-height: 1.55;
+}
+/* Figure caption that lives in the left-column rail rather than
+   under the chart on the right. Same size + colour as the original
+   under-chart figcaption (13px, #5b5b56) so it reads as a secondary,
+   descriptive note about the chart, a clear step down from the
+   16px announcement paragraph above it. No top divider — the size
+   and saturation drop alone are enough to separate it from the
+   paragraph above.
+   Selector includes p.tab-lede__figcaption to outrank the more general
+   .tab-lede--split .tab-lede__rail p rule above (which would otherwise
+   force this caption back up to 16px). */
+.tab-lede--split .tab-lede__rail p.tab-lede__figcaption {
+  margin-top: 18px;
+  max-width: 460px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: #5b5b56;
+}
+.tab-lede--split .tab-lede__figure {
+  margin: 0;
+  max-width: none;
+  /* Keep the chart from ballooning past its readable size on very wide
+     viewports. The container.wide cap is 1200px, the rail eats ~520px
+     of that, leaving ~580px for the chart — well under 760px so the cap
+     is mostly a safety net. */
+  width: 100%;
+}
+.tab-lede--split .tab-lede__figure--pareto {
+  /* Drop the inherited .tab-lede__figure--pareto cap; the column already
+     sets the chart width. The chart's own viewBox handles aspect. */
+  max-width: none;
+  /* White card framing to match the .demo modules used everywhere else
+     on the page (see controls.css → .demo). Same background/border/padding
+     so the hero chart reads as part of the same family of figures rather
+     than a stray transparent SVG sitting on the paper background. */
+  background: #fff;
+  border: 1px solid #ddd;
+  padding: 24px;
+}
+@media (max-width: 960px) {
+  .tab-lede--split {
+    grid-template-columns: 1fr;
+    row-gap: 36px;
+    /* Stacked layout is naturally tall — drop the half-viewport floor
+       so the hero doesn't add extra dead space on top. */
+    min-height: auto;
+  }
+  .tab-lede--split .tab-lede__rail {
+    max-width: 720px;
+  }
+  .tab-lede--split .tab-lede__figure--pareto {
+    /* Tighter card padding on narrow viewports so the chart keeps its
+       readable inner width. */
+    padding: 16px;
+  }
+  .tab-lede__title { font-size: 30px; }
+}
+@media (max-width: 720px) {
+  /* The Pareto SVG sizes its text in viewBox user units (viewBox is
+     0 0 1000 600). When the chart renders at viewport width on a phone
+     (~360px), viewBox units map to ~0.36 screen pixels each, so 15-unit
+     ticks would render at ~5px — illegible. Bump every text element up
+     in viewBox units so the on-screen size lands ~10-13px on mobile,
+     comparable to the desktop rendering. */
+  .pareto-axis text { font-size: 24px; }
+  .pareto-axis-title { font-size: 28px; }
+  .pareto-label { font-size: 20px; }
+  .pareto-point--highlight .pareto-label { font-size: 24px; }
+  .pareto-indicator-text { font-size: 16px; }
+  .pareto-speedup-label { font-size: 44px; }
+}
+@media (max-width: 600px) {
+  .tab-lede__title { font-size: 24px; }
+  .tab-lede--split .tab-lede__rail p { font-size: 15px; }
+}
+@media (max-width: 480px) {
+  /* Very-narrow phones: bump chart labels one more notch + tighten the
+     hero rail's max-width so the prose doesn't kiss the viewport edge. */
+  .pareto-axis text { font-size: 28px; }
+  .pareto-label { font-size: 24px; }
+  .pareto-point--highlight .pareto-label { font-size: 28px; }
+  .pareto-speedup-label { font-size: 52px; }
+}
+
+/* --- Site map · full-width independent band ----------------------------
+   Hand-off block between the release hero and the bio primer. Sits
+   edge-to-edge in its own paper tone (slightly recessed vs the page) so
+   the visitor reads it as a deliberate "where to go next" signpost
+   rather than another prose paragraph. Four numbered cards (01..04)
+   sit on a 4-column grid, each with a mono uppercase title, an arrow
+   (↓ for the in-page primer anchor, → for the cross-tab links), and a
+   one-line gloss. Hover lifts the card colour to the green accent and
+   nudges the arrow.
+   Anchors still feed tabs.js's hashchange listener, identical to the
+   previous .intro-guide-list anchors — only the styling and structure
+   change. */
+.intro-sitemap {
+  margin: 64px 0 16px;
+  padding: 56px 32px 60px;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+}
+.intro-sitemap__inner {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+/* Three-tier centered heading: small green mono eyebrow "Site map" above
+   a large Inter title "What's inside" above a one-line gloss. Reads as
+   an editorial signpost (FT/distill.pub style) rather than a flat label.
+   The stack is centered to mirror the symmetric four-card grid below. */
+.intro-sitemap__heading {
+  text-align: center;
+  margin-bottom: 52px;
+}
+.intro-sitemap__eyebrow {
+  display: inline-block;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--green);
+  margin-bottom: 16px;
+}
+.intro-sitemap__title {
+  margin: 0;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 32px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  line-height: 1.15;
+  color: var(--ink);
+}
+.intro-sitemap__subtitle {
+  margin: 16px auto 0;
+  max-width: 560px;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
+@media (max-width: 720px) {
+  .intro-sitemap__heading { margin-bottom: 36px; }
+  .intro-sitemap__title { font-size: 24px; }
+  .intro-sitemap__subtitle { font-size: 12.5px; }
+}
+.intro-sitemap__steps {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+}
+.intro-sitemap__step { display: flex; }
+.intro-sitemap__link {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  padding: 8px 28px 8px 0;
+  margin-right: 28px;
+  border-right: 1px solid var(--rule);
+  text-decoration: none;
+  color: inherit;
+  transition: color 0.18s ease;
+}
+.intro-sitemap__step:last-child .intro-sitemap__link {
+  border-right: none;
+  margin-right: 0;
+  padding-right: 0;
+}
+/* Icon — small free-floating line-art diagram above the label.
+   No tile, no background: aligned with the rest of the site's visual
+   language (skeletal molecule formulas, helix diagram), all rendered
+   as pure line-art with thin 1.2 strokes. The icon is fully monochrome:
+   ink at rest, green on hover (cascade via `currentColor`). */
+.intro-sitemap__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 20px;
+  color: var(--ink);
+  transition: color 0.22s ease;
+}
+.intro-sitemap__icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+}
+.intro-sitemap__label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  line-height: 1.1;
+  color: var(--ink);
+  transition: color 0.18s ease;
+}
+.intro-sitemap__title { white-space: nowrap; margin-right: auto; }
+/* Arrow — same SVG glyph for every card so the visual weight is identical
+   across the row. The first card (Intro → in-page primer) rotates 90° to
+   point down; nothing else differs. currentColor lets it inherit the
+   green / hover colour from the cascade above. */
+.intro-sitemap__arrow {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--green);
+  transition: transform 0.18s ease, color 0.18s ease;
+}
+.intro-sitemap__arrow svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.intro-sitemap__step:first-child .intro-sitemap__arrow svg {
+  transform: rotate(90deg);
+}
+.intro-sitemap__desc {
+  margin: 0;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.55;
+  color: var(--ink-soft);
+}
+.intro-sitemap__link:hover,
+.intro-sitemap__link:focus-visible { outline: none; }
+.intro-sitemap__link:hover .intro-sitemap__label,
+.intro-sitemap__link:focus-visible .intro-sitemap__label,
+.intro-sitemap__link:hover .intro-sitemap__arrow,
+.intro-sitemap__link:focus-visible .intro-sitemap__arrow {
+  color: var(--green);
+}
+.intro-sitemap__link:hover .intro-sitemap__icon,
+.intro-sitemap__link:focus-visible .intro-sitemap__icon {
+  color: var(--green);
+}
+/* Move the arrow on the directional axis: → slides right, ↓ slides down.
+   Each step's nth-child sets which one applies — the first card has the
+   ↓ (in-page primer), the rest are cross-tab → links. */
+.intro-sitemap__step:first-child .intro-sitemap__link:hover .intro-sitemap__arrow,
+.intro-sitemap__step:first-child .intro-sitemap__link:focus-visible .intro-sitemap__arrow {
+  transform: translateY(3px);
+}
+.intro-sitemap__step:not(:first-child) .intro-sitemap__link:hover .intro-sitemap__arrow,
+.intro-sitemap__step:not(:first-child) .intro-sitemap__link:focus-visible .intro-sitemap__arrow {
+  transform: translateX(4px);
+}
+@media (max-width: 960px) {
+  .intro-sitemap { padding: 40px 24px 44px; }
+  .intro-sitemap__steps {
+    grid-template-columns: repeat(2, 1fr);
+    row-gap: 28px;
+  }
+  .intro-sitemap__link {
+    padding: 0 20px 0 0;
+    margin-right: 20px;
+  }
+  /* Right column items lose the right border (they're the row-end). */
+  .intro-sitemap__step:nth-child(2n) .intro-sitemap__link {
+    border-right: none;
+    margin-right: 0;
+    padding-right: 0;
+  }
+  .intro-sitemap__label { gap: 10px; font-size: 17px; }
+  .intro-sitemap__icon { width: 40px; height: 40px; margin-bottom: 16px; }
+}
+@media (max-width: 600px) {
+  .intro-sitemap__steps {
+    grid-template-columns: 1fr;
+    row-gap: 0;
+  }
+  .intro-sitemap__link {
+    padding: 22px 0;
+    margin-right: 0;
+    border-right: none;
+    border-bottom: 1px solid var(--rule);
+  }
+  .intro-sitemap__step:nth-child(2n) .intro-sitemap__link {
+    /* override the 2-col mobile rule above */
+    border-right: none;
+  }
+  .intro-sitemap__step:last-child .intro-sitemap__link {
+    border-bottom: none;
+    padding-bottom: 4px;
+  }
+  .intro-sitemap__step:first-child .intro-sitemap__link {
+    padding-top: 4px;
+  }
+  .intro-sitemap__label { font-size: 18px; gap: 12px; }
+  .intro-sitemap__icon { width: 38px; height: 38px; margin-bottom: 14px; }
+}
+
+/* --- Primer header — centered editorial module
+       Reads as a proper standalone section between the site map above
+       and the §1 sub-rows below: centered axis, generous vertical
+       padding, a tiny green accent bar at the top to anchor the module
+       on the page without competing with the §-headings that follow.
+       Eyebrow + h2 + standfirst + kicker all share the same centerline. */
+.intro-primer-heading {
+  position: relative;
+  margin: 32px auto 40px;
+  padding: 40px 0 36px;
+  text-align: center;
+}
+/* Centred 2px green accent bar above the eyebrow. It's the only
+   structural element of the module: short enough to read as a mark
+   (40px wide), in --green so it ties into the page accent palette
+   without shouting. Replaces the previous left-rail rule since the
+   module is now axis-centered. */
+.intro-primer-heading::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 2px;
+  background: var(--green);
+}
+.intro-primer-heading .section-num { margin-bottom: 10px; }
+.intro-primer-heading h2 {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 26px; font-weight: 400;
+  letter-spacing: -0.3px;
+  color: var(--ink);
+  margin-bottom: 20px;
+}
+/* Standfirst block: centred editorial lede. The max-width keeps the
+   measure readable (~62 chars at 17px) so the centred axis doesn't
+   produce an awkwardly wide single line. */
+.intro-primer-heading .intro-primer-lede {
+  max-width: 640px;
+  margin: 0 auto;
+}
+.intro-primer-heading .intro-primer-lede p {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.65;
+  color: var(--ink);
+}
+/* Kicker: the thesis line gets its own beat. Mono register echoes the
+   .section-num eyebrow at the top of the module, so the kicker reads
+   as the closing bookend of the editorial block. A short centred
+   hairline (via ::before) sits above it as the visual beat — no full
+   border across the column, which would fight with the centred axis. */
+.intro-primer-heading .intro-primer-lede .intro-primer-lede__kicker {
+  position: relative;
+  margin-top: 22px;
+  padding-top: 20px;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--ink);
+}
+.intro-primer-heading .intro-primer-lede .intro-primer-lede__kicker::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 24px;
+  height: 1px;
+  background: var(--rule);
+}
+.intro-primer-heading em { color: var(--ink); font-style: normal; font-weight: 500; }
+
+/* Inline base tokens: A / C / G / T rendered as small filled chips
+   using the conventional sequence-viewer palette (mirrors BASE_FILL
+   in tokenizer.js so the same four colours read consistently across
+   the primer and the §3 tokenizer demo).
+   Sizing notes:
+   - font-size 0.78em (drops the 17px body text to ~13px inside the
+     chip) gives the chips their own typographic register without
+     making them shout louder than the surrounding prose.
+   - line-height 1 + symmetrical 1px/6px padding pins the chip box
+     to ~15px tall, well inside the parent's 28px line-box (17px ×
+     1.65), so the chips never push the line apart even when several
+     of them sit on the same line.
+   - min-width 1.4em keeps the four chips optically the same width
+     even though M-width letters differ in mono (A/G/T are wider
+     than C). */
+.intro-primer-heading .intro-base {
+  display: inline-block;
+  min-width: 1.4em;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 0.78em;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  text-align: center;
+  color: #fff;
+  vertical-align: 1px;
+}
+.intro-primer-heading .intro-base[data-letter="A"] { background: #15803d; }
+.intro-primer-heading .intro-base[data-letter="C"] { background: #0369a1; }
+.intro-primer-heading .intro-base[data-letter="G"] { background: #a16207; }
+.intro-primer-heading .intro-base[data-letter="T"] { background: #be185d; }
+
+/* --- One sub-row per central-dogma level. Each one wraps its narrative
+       + visual in section--two-col, which we get "for free" from the
+       demo's existing layout system. The padding + bottom border just
+       provide visual separation between rows, much lighter than the
+       global section { padding: 64px 0 } so the primer doesn't dwarf
+       the real sections that follow it. */
+.intro-subsection {
+  padding: 36px 0;
+  border-bottom: 1px solid #eee;
+}
+.intro-subsection:last-of-type { border-bottom: none; padding-bottom: 16px; }
+.intro-subsection:first-of-type { padding-top: 28px; }
+
+/* --- shared sequence styling ------------------------------------------- */
+.cd-seq {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 14px; font-weight: 400;
+  letter-spacing: 0.06em; line-height: 1.9;
+  color: var(--ink); word-break: break-all;
+}
+.cd-seg { padding: 2px 1px; border-radius: 2px; }
+.cd-seg--promoter { background: var(--promoter-soft); color: #6b4d18; }
+.cd-seg--exon     { background: var(--green-soft);    color: var(--ink); }
+.cd-seg--intron   { color: var(--intron); }
+
+/* --- row 1 : bases (4 skeletal SVGs in a row) -------------------------- */
+.cd-mols {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+  align-items: end;
+}
+.cd-mol-wrap {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 10px;
+}
+.cd-mol-svg { width: 100%; max-width: 130px; }
+.cd-mol-svg svg { display: block; width: 100%; height: auto; }
+/* Two-line label: big mono letter (A / C / G / T) sits above the full
+   name. The <b> is the only element in the source — the trailing text
+   node "adenine"/etc. becomes an anonymous flex item, so flex column +
+   align-items: center stacks them automatically without touching the
+   HTML. */
+.cd-mol-label {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 2px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px; letter-spacing: 0.06em;
+  color: var(--ink-soft);
+  text-align: center;
+}
+.cd-mol-label b {
+  display: block;
+  margin: 0;
+  font-size: 22px; font-weight: 700;
+  letter-spacing: 0.02em; line-height: 1;
+  color: var(--ink);
+}
+
+/* --- row 2 : DNA helix ------------------------------------------------- */
+/* No background/border on the wrapper; the parent .demo card carries
+   the white frame. The wrapper is just here to host the SVG. */
+.cd-helix-wrap svg { display: block; width: 100%; height: auto; }
+/* Pairing legend under the helix. Two centred A=T / G≡C tiles + an
+   H-bond sub-label that turns the typographic difference between
+   = and ≡ into actual chemistry. Caption below, mono uppercase, faint,
+   matching the .cd-protein-caption / .cd-track-labels treatment so the
+   primer reads with one consistent caption voice. */
+.cd-helix-rules {
+  /* Tighter gap to the helix above so the legend reads as a caption to
+     the diagram, plus extra slack below to push the whole pair-block
+     further from the bottom edge of the .demo card. The .demo's own
+     padding-bottom (24px from controls.css) sits underneath this margin
+     for ~40px of total breathing room below the caption. */
+  margin: 12px 0 16px;
+  display: flex; flex-direction: column;
+  align-items: center; gap: 12px;
+  font-family: "JetBrains Mono", monospace;
+}
+.cd-helix-rules-pairs {
+  display: flex; gap: 56px; align-items: flex-start;
+}
+.cd-pair {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 8px;
+}
+.cd-pair-formula {
+  display: inline-flex; align-items: center; gap: 10px;
+  font-size: 24px; font-weight: 700;
+  letter-spacing: 0.04em; line-height: 1;
+  color: var(--green);
+}
+.cd-pair-bond {
+  color: var(--ink-soft);
+  font-weight: 500;
+}
+.cd-pair-meta {
+  font-size: 9.5px; letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.cd-pair-caption {
+  margin-top: 2px;
+  font-size: 10px; letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* --- rows 3 + 4 : gene strip (per-segment bar + letters) --------------- */
+/* Strip is centred in its parent .demo card, not left-aligned: the gene
+   sketch is a self-contained diagram and reads better with breathing room
+   on both sides than tucked against the card's left edge. justify-content
+   handles the in-flow case (segments fit in one line); margin: 0 auto with
+   width: max-content + max-width: 100% covers the inline-block-style
+   centring when the strip is shorter than the parent. */
+.cd-gene-strip {
+  display: flex; flex-wrap: wrap;
+  align-items: flex-start; justify-content: center;
+  width: max-content; max-width: 100%; margin: 0 auto;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 14px; font-weight: 400;
+  letter-spacing: 0.06em; line-height: 1.9;
+}
+.cd-genex {
+  display: flex; flex-direction: column;
+  flex: 0 0 auto; align-items: stretch;
+}
+.cd-genex-bar { height: 18px; margin-bottom: 10px; }
+.cd-genex-text {
+  display: block;
+  padding: 2px 1px; border-radius: 2px;
+}
+.cd-genex--promoter .cd-genex-bar  { background: var(--promoter); }
+.cd-genex--promoter .cd-genex-text { background: var(--promoter-soft); color: #6b4d18; }
+.cd-genex--exon .cd-genex-bar      { background: var(--green); }
+.cd-genex--exon .cd-genex-text     { background: var(--green-soft); color: var(--ink); }
+.cd-genex--intron .cd-genex-bar { position: relative; background: transparent; }
+.cd-genex--intron .cd-genex-bar::after {
+  content: ""; position: absolute;
+  top: 50%; left: 0; right: 0;
+  height: 1px; background: var(--intron);
+}
+.cd-genex--intron .cd-genex-text { color: var(--intron); }
+.cd-genex:first-child .cd-genex-bar { border-top-left-radius: 2px; border-bottom-left-radius: 2px; }
+.cd-genex:last-child  .cd-genex-bar { border-top-right-radius: 2px; border-bottom-right-radius: 2px; }
+
+.cd-track-labels {
+  /* margin-top bumped 12 → 28 so the legend reads as a separate caption
+     row under the gene strip rather than sitting flush against the
+     letters of the sequence. */
+  display: flex; align-items: center; justify-content: center; gap: 14px;
+  margin-top: 28px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.cd-track-labels .sw {
+  display: inline-block;
+  width: 18px; height: 8px; border-radius: 1px;
+  vertical-align: 1px; margin-right: 6px;
+}
+/* "LEGEND" prefix that labels the row as a key. Slightly darker + tighter
+   tracking than the items themselves so the eye groups it as the title
+   of the row rather than another item. The margin-right adds a wider
+   gap between "LEGEND" and the first swatch on top of the row's gap, so
+   the title visually detaches from the items. */
+.cd-track-labels__title {
+  color: var(--ink-soft);
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  margin-right: 6px;
+}
+
+/* --- row 4 specific : splicing (top strip → arrows → bottom mRNA) ----- */
+/* Splice block hosts pre-mRNA + arrow svg + spliced mRNA. We centre the
+   whole stack so the three rows line up on a single vertical axis inside
+   the parent card. The inner .cd-gene-strip rules above already do the
+   centring for the two strips themselves; this block centres the
+   transcribe-arrow svg between them too. */
+.cd-splice {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  margin: 0 auto;
+}
+.cd-splice .cd-gene-strip { flex-wrap: nowrap; margin-bottom: 0; }
+.cd-splice-arrows { display: block; width: 100%; }
+
+/* --- row 5 : protein, codon → AA translation table -------------------- */
+/* Grid sized to its content (label + 10 codon columns) and centred in the
+   parent card. The grid itself stays a fixed width regardless of the card
+   width, so margin: 0 auto picks up the leftover space symmetrically on
+   both sides. */
+.cd-translate {
+  display: grid;
+  grid-template-columns: max-content repeat(10, max-content);
+  align-items: center; justify-items: center;
+  column-gap: 6px; row-gap: 4px;
+  width: max-content; max-width: 100%;
+  margin: 0 auto 14px;
+}
+.cd-trow-label {
+  justify-self: end;
+  padding-right: 10px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px; font-weight: 500;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.cd-tcodon {
+  padding: 2px 6px;
+  background: var(--green-soft);
+  border-radius: 2px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 13px; letter-spacing: 0.06em;
+  color: var(--ink);
+}
+.cd-tarrow {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px; line-height: 1;
+  color: var(--green); opacity: 0.55;
+}
+.cd-taa {
+  width: 30px; height: 30px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+  background: #fff;
+  border: 1.5px solid var(--green);
+  color: var(--green);
+  font-family: "JetBrains Mono", monospace;
+  font-size: 13px; font-weight: 600;
+  /* position:relative is the anchor for the chain-link pseudo-element below. */
+  position: relative;
+}
+/* Peptide-bond chain: a thin green line drawn from each amino-acid
+   circle's right edge into the gap toward the next circle. The "30px"
+   width is generous; the next circle's white fill (painted after the
+   current one in source order) masks the portion that overlaps it, so
+   only the segment in the gap is actually visible. The :has(+ .cd-taa)
+   selector skips the last circle so we don't dangle a line off the end. */
+.cd-taa:has(+ .cd-taa)::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  width: 30px;
+  height: 1.5px;
+  background: rgba(49, 127, 63, 0.5);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+.cd-tname {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px; letter-spacing: 0.03em;
+  color: var(--ink-faint); line-height: 1.3;
+}
+
+/* "fold ↓" arrow between AA chain and the 3D viewer. */
+.cd-fold-arrow {
+  display: flex; flex-direction: column;
+  align-items: center;
+  margin: 8px 0 10px;
+}
+.cd-fold-arrow-icon {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 22px; line-height: 1;
+  color: var(--green);
+}
+.cd-fold-arrow-label {
+  margin-top: 4px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px; font-weight: 500;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+/* Container for the 3Dmol.js viewer (id="cd-protein-3d"). The .demo
+   parent provides the white card; this just supplies a height for the
+   WebGL canvas. Height trimmed (340 → 280) so the viewer doesn't dwarf
+   the rest of the row; 3Dmol's zoomTo() refits the molecule to whatever
+   container size it gets, so the molecule still fills the frame. */
+.cd-protein-3d {
+  width: 100%;
+  height: 280px;
+  position: relative;
+  overflow: hidden;
+}
+.cd-protein-3d canvas { display: block; }
+.cd-protein-3d-loading {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px; letter-spacing: 0.1em;
+  color: var(--ink-faint);
+  pointer-events: none;
+}
+/* Three-tier caption under the 3D viewer:
+     · title (sans, medium): the protein's common name, page-voice
+     · desc (sans, light, italic): one-line plain-language gloss
+     · meta (mono, uppercase, faint): chain count + clickable PDB ID
+   Mirrors the editorial pattern used by museum / journal captions:
+   name → what it is in plain English → the technical reference.
+   The mono meta line ties this row back to the rest of the primer's
+   captions (cd-pair-caption, cd-track-labels) so the page still has
+   one consistent caption voice. */
+.cd-protein-caption {
+  margin-top: 10px;
+  text-align: center;
+  display: flex; flex-direction: column;
+  align-items: center; gap: 4px;
+}
+.cd-protein-caption__title {
+  font-family: "Inter", sans-serif;
+  font-size: 19px; font-weight: 500;
+  letter-spacing: -0.01em; line-height: 1.2;
+  color: var(--ink);
+}
+.cd-protein-caption__desc {
+  font-family: "Inter", sans-serif;
+  font-size: 13px; font-weight: 300;
+  line-height: 1.45;
+  color: var(--ink-soft);
+}
+.cd-protein-caption__meta {
+  margin-top: 6px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.cd-protein-caption__meta a {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: rgba(138, 138, 131, 0.4);
+  text-underline-offset: 2px;
+  transition: color 0.15s ease, text-decoration-color 0.15s ease;
+}
+.cd-protein-caption__meta a:hover,
+.cd-protein-caption__meta a:focus-visible {
+  color: var(--green);
+  text-decoration-color: var(--green);
+  outline: none;
+}
+
+@media (max-width: 720px) {
+  .cd-mols { grid-template-columns: repeat(2, 1fr); }
+
+  /* §3 / §4 splice / §5 translate: the inner diagrams are sized by mono
+     letters / 30px circles and cannot shrink below their natural width
+     (cd-genex segments are flex: 0 0 auto; cd-translate is an 11-column
+     max-content grid). On a narrow viewport they overflow the .demo
+     card. Promote each diagram to its own horizontally-scrollable
+     viewport so the card edge stays clean and the rest of the layout
+     keeps working — content remains fully accessible by scrolling. */
+
+  /* §3 standalone gene strip: switch from flex-wrap: wrap to a single
+     horizontal scroll lane so the bar/letters stay aligned in one row
+     instead of breaking mid-sequence. Mirrors the §4 splice behaviour
+     below. The .cd-splice .cd-gene-strip override further down resets
+     overflow back to visible so the parent .cd-splice owns the scroll
+     in §4 rather than each inner strip scrolling on its own. */
+  .cd-gene-strip {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    width: 100%;
+    max-width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .cd-translate {
+    width: 100%;
+    max-width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    justify-content: start;
+  }
+
+  /* For .cd-splice we collapse the three rows (DNA strip → arrows →
+     mRNA strip) into a single max-content grid column so they all
+     resolve to the same width — the widest row's natural width. That
+     keeps the transcribe arrows aligned with the letters above and
+     below them, and produces a clean horizontal scroll on the whole
+     stack rather than each row scrolling independently. */
+  .cd-splice {
+    display: grid;
+    grid-template-columns: max-content;
+    justify-content: start;
+    width: 100%;
+    max-width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+  }
+  .cd-splice .cd-gene-strip {
+    width: auto;
+    max-width: none;
+    margin: 0;
+    overflow: visible;
+  }
+  .cd-splice-arrows { width: 100%; }
+}
+
+/* ------------------------------------------------------------------ */
+/* §0 release lede · native Pareto chart.                             */
+/* Replaces /img/pareto.png with an inline SVG built from             */
+/* pareto/pareto_data.csv. Geometry mirrors the matplotlib reference, */
+/* but the chrome is pulled back to fit the editorial blog tone:      */
+/* hairline frame + tick lines instead of the 3px black box, mono     */
+/* tabular tick labels, plain text data labels with a paper-coloured  */
+/* paint-order halo (no pill box around each marker), and the         */
+/* "better/faster" indicator styled as a small mono uppercase eyebrow */
+/* the same way as the section labels elsewhere on the page. Carbon   */
+/* points still scale up + use a bolder label so the eye lands on     */
+/* them first.                                                         */
+/* ------------------------------------------------------------------ */
+.tab-lede__figure--pareto {
+  /* Wider than the default tab-lede__figure so the long x-axis
+     (decade ticks 200 → 200k) doesn't squash the right-edge labels. */
+  max-width: 760px;
+}
+.pareto-chart {
+  /* The white card frame is now provided by the parent
+     .tab-lede__figure--pareto (matching the .demo modules used on the
+     rest of the page), so the SVG itself stays transparent — the inner
+     plot fill (.pareto-bg) and frame stroke (.pareto-frame) below are
+     left as no-ops to avoid double-drawing a second nested box inside
+     the figure card. */
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.pareto-bg { fill: none; }
+.pareto-frame { display: none; }
+
+/* Axis lines · the L-shape (left + bottom) that replaces the dropped
+   rectangular frame. Same hairline weight as the old frame so the chart
+   keeps its editorial-paper register. */
+.pareto-axis-lines line {
+  stroke: #cfcdbf;
+  stroke-width: 1;
+  stroke-linecap: square;
+}
+
+/* Figcaption tag · small mono-uppercase eyebrow that prefixes the
+   descriptive sentence below the chart. Signals "this caption refers
+   to the figure above" without bloating the prose itself, and ties
+   the caption back to the technical-mono register used by the chart's
+   axis ticks and the page's section labels. */
+.pareto-figcaption-tag {
+  display: inline;
+  margin-right: 10px;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--green);
+  white-space: nowrap;
+}
+
+/* Tick marks at the same hairline weight. Tick labels in JetBrains
+   Mono with tabular nums so the decade ticks line up tabularly and
+   the chart picks up the page's technical-mono register. Dimmed so
+   they read as scale references, not primary content. */
+.pareto-axis line {
+  stroke: #cfcdbf;
+  stroke-width: 1;
+}
+.pareto-axis text {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 15px;
+  fill: var(--ink-soft);
+  font-feature-settings: "tnum";
+}
+.pareto-axis--y text {
+  text-anchor: end;
+  dominant-baseline: middle;
+}
+.pareto-axis--x text {
+  text-anchor: middle;
+  dominant-baseline: hanging;
+}
+
+/* Axis titles in Inter to match the page body; italic subtitle under
+   "Throughput" carries the units in the muted ink-soft tone. */
+.pareto-axis-title {
+  font-family: "Inter", "Helvetica Neue", sans-serif;
+  font-size: 21px;
+  font-weight: 600;
+  fill: var(--ink);
+  text-anchor: middle;
+}
+.pareto-axis-subtitle {
+  font-family: "Inter", "Helvetica Neue", sans-serif;
+  font-size: 13px;
+  font-style: italic;
+  fill: var(--ink-soft);
+  text-anchor: middle;
+}
+
+/* "Better/faster" axes-of-improvement indicator in the lower-left.
+   Arrows in muted ink, labels in the same mono-uppercase eyebrow
+   style as the section labels (banner-links, section-num, etc.)
+   so the chart's chrome doesn't read as a foreign matplotlib glyph. */
+.pareto-indicator line {
+  stroke: var(--ink-faint);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+.pareto-indicator polygon {
+  fill: var(--ink-faint);
+}
+.pareto-indicator-text {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  fill: var(--ink-faint);
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
+/* 275× speedup arrow — the editorial headline. Solid ink, slightly
+   thinner than before so it doesn't overpower the chart. The label
+   gets a paper-coloured paint-order halo so it reads cleanly where
+   it crosses the arrow line behind it. */
+.pareto-speedup line {
+  stroke: var(--ink);
+  stroke-width: 2.5;
+  stroke-linecap: round;
+}
+.pareto-speedup polygon {
+  fill: var(--ink);
+}
+.pareto-speedup-label {
+  /* Mono + bold, sized so the "275×" reads as the chart's editorial
+     headline. The label sits on-axis (y matches the arrow shaft) and
+     the shaft is split in two segments around it (see demo.html), so
+     no paint-order halo is needed: the number occupies the gap
+     between the two arrow halves rather than overlaying a continuous
+     line. dominant-baseline: middle vertically centres the glyphs
+     on the same y-coord as the shaft endpoints. */
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 32px;
+  font-weight: 700;
+  fill: var(--ink);
+  text-anchor: middle;
+  dominant-baseline: middle;
+  letter-spacing: -0.02em;
+}
+
+/* Data labels: plain text, no pill box. The paint-order stroke acts
+   as a paper-coloured halo so the text always reads cleanly — even
+   when it sits next to a logo or crosses a tick line. Carbon labels
+   step up in size + weight so the highlighted models still pop. */
+.pareto-label {
+  font-family: "Inter", "Helvetica Neue", sans-serif;
+  font-size: 13px;
+  fill: var(--ink);
+  text-anchor: middle;
+  dominant-baseline: middle;
+  paint-order: stroke;
+  stroke: #ffffff;
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
+.pareto-point--highlight .pareto-label {
+  font-size: 15px;
+  font-weight: 600;
+}

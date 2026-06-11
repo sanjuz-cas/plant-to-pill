@@ -1,0 +1,208 @@
+/* code-snippet.css, reusable "Run this from code" disclosure that sits
+   under a demo widget. Native <details>/<summary> + two tabs (Endpoint /
+   Local) + a copy button. Wire-up lives in shared/code-snippet.js. */
+
+.code-snippet {
+  margin: 18px 0 0;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 11px;
+}
+
+/* Disclosure header. Styled as a pill-button so the affordance reads as
+   a card-level action rather than a faint inline label: warm-off-white
+   fill + outline, a brand-green </> chip on the left to signal "code",
+   and a chevron on the right that rotates 90° when the panel is open.
+   Border + background shift to brand-green tints on hover / open to
+   reinforce state without needing a separate +/− glyph. */
+.code-snippet > summary {
+  cursor: pointer;
+  color: #1f1f1d;
+  font-weight: 600;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  font-size: 10.5px;
+  padding: 7px 14px 7px 8px;
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  user-select: none;
+  background: #f7f5ee;
+  border: 1px solid #c8c2b3;
+  border-radius: 3px;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+.code-snippet > summary::-webkit-details-marker { display: none; }
+.code-snippet > summary:hover {
+  border-color: var(--green);
+  background: #f4f8f4;
+}
+.code-snippet[open] > summary {
+  border-color: var(--green);
+  background: #f4f8f4;
+}
+/* "</>" code chip on the left: solid green pill, white glyph. Same
+   visual weight as the brand chips used elsewhere in the page. */
+.code-snippet > summary::before {
+  content: "</>";
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 18px;
+  padding: 0 5px;
+  background: var(--green);
+  color: #ffffff;
+  font-family: "JetBrains Mono", monospace;
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: -0.5px;
+  border-radius: 2px;
+}
+/* Chevron on the right, pivots on open via CSS transform. */
+.code-snippet > summary::after {
+  content: "›";
+  margin-left: 2px;
+  color: #6b7a6e;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 0;
+  transition: transform 0.15s, color 0.15s;
+}
+.code-snippet > summary:hover::after,
+.code-snippet[open] > summary::after {
+  color: var(--green);
+}
+.code-snippet[open] > summary::after {
+  transform: rotate(90deg);
+}
+
+.code-snippet__body {
+  margin-top: 10px;
+  border: 1px solid #d4dcc9;
+  border-radius: 3px;
+  overflow: hidden;
+  background: #ffffff;
+  position: relative;
+}
+
+.code-snippet__tabs {
+  display: flex;
+  align-items: center;
+  background: #f7f5ee;
+  border-bottom: 1px solid #d4dcc9;
+}
+.code-snippet__tab {
+  padding: 8px 14px;
+  background: transparent;
+  border: none;
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #6b7a6e;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color 0.12s, border-bottom-color 0.12s, background 0.12s;
+}
+.code-snippet__tab:hover { color: #1f1f1d; background: rgba(0,0,0,0.02); }
+.code-snippet__tab.active {
+  color: #1f1f1d;
+  border-bottom-color: var(--green);
+}
+
+.code-snippet__panel { display: none; background: #ffffff; }
+.code-snippet__panel.active { display: block; }
+.code-snippet__panel pre {
+  margin: 0;
+  padding: 14px 16px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 12px;
+  line-height: 1.55;
+  color: #1f1f1d;
+  background: #ffffff;
+  overflow-x: auto;
+  white-space: pre;
+  tab-size: 4;
+}
+/* highlight.js sets `background` on the `.hljs` class once it's done
+   processing a block. Force-override to transparent so our pure-white
+   panel background shows through regardless of which hljs theme (if any)
+   gets loaded. */
+.code-snippet__panel pre code,
+.code-snippet__panel pre code.hljs {
+  background: transparent;
+  padding: 0;
+  color: inherit;
+}
+
+/* --- highlight.js token palette --------------------------------------
+   We intentionally don't load a hljs theme stylesheet. Instead, define
+   token colours here so the Python snippets stay on-brand: brand green
+   for keywords / builtins, warm amber for strings, blue for numbers,
+   italic muted gray for comments. Everything else falls through to the
+   default ink colour set on <pre>. */
+.code-snippet__panel .hljs-comment,
+.code-snippet__panel .hljs-quote {
+  color: #9a958a;
+  font-style: italic;
+}
+.code-snippet__panel .hljs-keyword,
+.code-snippet__panel .hljs-built_in,
+.code-snippet__panel .hljs-literal,
+.code-snippet__panel .hljs-type {
+  color: #317f3f;
+}
+.code-snippet__panel .hljs-string,
+.code-snippet__panel .hljs-regexp,
+.code-snippet__panel .hljs-doctag {
+  color: #a9762f;
+}
+.code-snippet__panel .hljs-number {
+  color: #2c5aa0;
+}
+.code-snippet__panel .hljs-meta,
+.code-snippet__panel .hljs-meta .hljs-string {
+  color: #7a6242;
+}
+.code-snippet__panel .hljs-title,
+.code-snippet__panel .hljs-title.function_,
+.code-snippet__panel .hljs-title.class_,
+.code-snippet__panel .hljs-class .hljs-title,
+.code-snippet__panel .hljs-section {
+  color: #1f1f1d;
+  font-weight: 500;
+}
+.code-snippet__panel .hljs-attr,
+.code-snippet__panel .hljs-params,
+.code-snippet__panel .hljs-variable,
+.code-snippet__panel .hljs-symbol,
+.code-snippet__panel .hljs-operator,
+.code-snippet__panel .hljs-punctuation {
+  color: #1f1f1d;
+}
+
+/* Copy button. Lives inside .code-snippet__tabs (the JS lifts it there
+   on init) so the flex `align-items: center` on the strip handles
+   vertical centring against the tab pills. `margin-left: auto` shoves
+   it to the right edge. On a pure-white panel background we lean on a
+   faint warm fill + border so the chip stays visible without competing
+   with the code. */
+.code-snippet__copy {
+  margin-left: auto;
+  margin-right: 12px;
+  padding: 4px 10px;
+  background: #f7f5ee;
+  border: 1px solid #d4dcc9;
+  border-radius: 3px;
+  font-family: inherit;
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #6b7a6e;
+  cursor: pointer;
+  transition: color 0.12s, border-color 0.12s, background 0.12s;
+}
+.code-snippet__copy:hover { color: #1f1f1d; background: #f1ece0; }
+.code-snippet__copy.copied { color: var(--green); border-color: var(--green); background: #ffffff; }

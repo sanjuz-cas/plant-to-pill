@@ -1,0 +1,38 @@
+# Carbon
+
+> Carbon is Hugging Face's open-source family of autoregressive genomic foundation models for DNA. Three sizes (500M, 3B, and 8B parameters), a 393,216 bp context window, a 6-mer BPE tokenizer, and 1 trillion training tokens spanning the tree of life. Model weights, training code, and the data pipeline are all open source on the Hugging Face Hub.
+
+This site is the interactive editorial walkthrough of what the 3B checkpoint learned. It is organised into four tabs:
+
+- **Intro** — a short primer on what the model reads (the four bases of DNA, helices, genes, splicing, translation) and a guided tour of the rest of the page.
+- **DNA Lab** — five live sections that hit the deployed 3B model: streaming continuation of an arbitrary DNA prefix, per-token likelihood scoring, in-silico variant effect prediction (VEP), ESMFold-based protein folding over Carbon-decoded ORFs, and a UMAP scatter of ~500,000 gene embeddings.
+- **Carbon Recipe** — the training story: tokenizer design, the hybrid loss, the dataset mixture, the species tree learned from per-species mean embeddings, the long-context training schedule, and the headline results.
+- **Sandbox** — a minimal prompt-and-stream UI for running Carbon on arbitrary DNA sequences without leaving the page.
+
+## Demo
+
+- [Live interactive demo (this site)](/): Editorial scrollytell across Intro / DNA Lab / Carbon Recipe / Sandbox.
+- [Standalone sandbox](/sandbox-only): The DNA continuation UI without the surrounding editorial.
+
+## Models
+
+- [HuggingFaceBio/Carbon-3B](https://huggingface.co/HuggingFaceBio/Carbon-3B): The default 3B checkpoint used by every live interaction on this page.
+- [HuggingFaceBio organisation page](https://huggingface.co/HuggingFaceBio): Full list of Carbon model sizes (500M, 3B, 8B) and related artefacts.
+
+## Code
+
+- [github.com/huggingface/carbon](https://github.com/huggingface/carbon): Training and inference code.
+
+## Data
+
+- [HuggingFaceBio/carbon-inference-evals](https://huggingface.co/datasets/HuggingFaceBio/carbon-inference-evals): The evaluation dataset behind the headline numbers shown in the Results section.
+
+## API
+
+The demo's FastAPI backend exposes a small set of JSON endpoints that crawlers and agents may find useful. They are designed for the frontend but are not gated:
+
+- `POST /generate` — streaming DNA continuation. Body: `{"prompt": "ACGT...", "max_tokens": 128, "temperature": 0.5, "top_p": 0.9}`. Returns Server-Sent Events.
+- `POST /score` — per-token log-probabilities over a forced sequence. Body: `{"sequence": "ACGT...", "max_window": 24000}`.
+- `POST /fold` — ESMFold-based protein structure prediction. Body: `{"sequence": "<AMINO_ACIDS>"}`. Returns PDB plus mean pLDDT.
+- `GET /config` — the model identifier currently served.
+- `GET /umap`, `GET /umap_labels`, `GET /umap_names`, `GET /highlights`, `GET /species_tree`, `GET /genes`, `GET /variants`, `GET /species` — static data payloads powering the visualisations.

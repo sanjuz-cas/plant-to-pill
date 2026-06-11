@@ -1,0 +1,173 @@
+/* sequence.css, utilities for any section that displays nucleotide or
+   amino-acid sequences: gene track SVG (used by §1, §3, §5), the .seq-
+   label header (with carbon/reference chips and length tags), the
+   .seq-block monospace box, the .stat-row at the bottom of demos, and
+   small reference-mismatch highlight styles shared by §1 and §5. */
+
+/* --- Gene track + gene-info (shared by §1, §3, §5) --- */
+.gene-info {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px; color: #666;
+  margin: 4px 0 12px;
+  min-height: 14px;
+}
+.gene-info strong { color: #1f1f1d; font-weight: 500; }
+.gene-track {
+  width: 100%; height: 40px; display: block;
+  margin: 4px 0 8px;
+}
+.gene-track.draggable { height: 52px; touch-action: none; }
+.gene-track .exon { fill: #317f3f; }
+.gene-track .intron { stroke: #aaa; stroke-width: 1; }
+.gene-track .playhead { stroke: #bc2e25; stroke-width: 2; }
+.gene-track .gen-region { fill: #317f3f; opacity: 0.15; }
+.gene-track .prompt-region { fill: #1f1f1d; opacity: 0.04; }
+.gene-track .handle { cursor: ew-resize; }
+.gene-track .handle line { stroke: #1f1f1d; stroke-width: 1.5; }
+.gene-track .handle polygon { fill: #1f1f1d; }
+.gene-track .handle:hover line,
+.gene-track .handle.dragging line { stroke: #000; stroke-width: 2; }
+.gene-track .handle:hover polygon,
+.gene-track .handle.dragging polygon { fill: #000; }
+.gene-track .handle.gen line { stroke: #317f3f; }
+.gene-track .handle.gen polygon { fill: #317f3f; }
+.gene-track .handle.gen:hover line,
+.gene-track .handle.gen.dragging line { stroke: #1f5024; stroke-width: 2; }
+.gene-track .handle.gen:hover polygon,
+.gene-track .handle.gen.dragging polygon { fill: #1f5024; }
+.gene-track text { font-family: "JetBrains Mono", monospace; font-size: 9px; fill: #888; }
+
+/* Instant tooltips (no native-title delay) for legend items. */
+.legend-tip { position: relative; }
+.legend-tip:hover::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1f1f1d;
+  color: #f7f5ee;
+  padding: 6px 10px;
+  border-radius: 3px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  font-family: 'Inter', sans-serif;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: normal;
+  width: max-content;
+  max-width: 260px;
+  line-height: 1.4;
+  z-index: 10;
+  pointer-events: none;
+}
+.legend-tip:hover::before {
+  content: "";
+  position: absolute;
+  bottom: calc(100% + 2px);
+  left: 50%;
+  transform: translateX(-50%);
+  border: 4px solid transparent;
+  border-top-color: #1f1f1d;
+  z-index: 10;
+  pointer-events: none;
+}
+.track-axis-label {
+  font-family: "JetBrains Mono", monospace; font-size: 9px;
+  color: #888; text-transform: uppercase; letter-spacing: 1px;
+  display: flex; justify-content: space-between; margin-top: -4px;
+}
+
+/* --- seq-label header row + chips + length tag (used by §1, §3, §5) --- */
+.seq-label {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 9px; color: #888; text-transform: uppercase; letter-spacing: 1.5px;
+  margin-top: 14px; margin-bottom: 4px; display: flex; gap: 12px; align-items: center;
+}
+/* Generic colour-swatch chip used in inline legends across the demo
+   (.seq-label, .track-axis-label, etc.). The class is the obvious
+   semantic hook, so the selector is intentionally global rather than
+   nested under a single parent — having the rule scoped to .seq-label
+   broke every other legend that reused the pattern (e.g. the §6 results
+   chart legend), which all rendered as zero-width invisible spans. */
+.legend-swatch {
+  display: inline-block; width: 8px; height: 8px; vertical-align: middle;
+  margin-right: 4px; border-radius: 1px;
+}
+
+/* Chart legend variant of .track-axis-label (used by the §6 results
+   bars chart). The base class is mono uppercase 9px which suits a thin
+   axis caption; for a 4-model legend that pattern was hard to read.
+   The variant keeps the demo's typographic system but bumps the legend
+   to sentence-case 12px Inter and gives the swatches more visual weight
+   so they read as a proper colour key rather than caption text. */
+.chart-legend {
+  font-family: "Inter", sans-serif;
+  font-size: 12px;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--ink, #1f1f1d);
+  padding-top: 16px;
+  gap: 22px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+}
+.chart-legend__item {
+  display: inline-flex; align-items: center;
+  font-weight: 500;
+}
+.chart-legend__item .legend-swatch {
+  width: 14px; height: 14px;
+  margin-right: 7px;
+  border-radius: 2px;
+}
+/* Inline tag chips used in §5 to disambiguate carbon vs reference rows.
+   Same shape/size, different colour band so the eye instantly maps a
+   row of AAs to the correct identity without re-reading the full label. */
+.seq-label .seq-tag {
+  display: inline-block;
+  font-size: 9px; letter-spacing: 1.5px;
+  padding: 1px 6px; margin-right: 8px;
+  border-radius: 2px;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+.seq-label .seq-tag.carbon { background: #1f1f1d; color: #f7f5ee; }
+.seq-label .seq-tag.ref    { background: #f0eee5; color: #555; border: 1px solid #d8d5c8; }
+.seq-label .aa-len-tag {
+  color: #1f1f1d;
+  font-variant-numeric: tabular-nums;
+  text-transform: none;
+  letter-spacing: 0.3px;
+}
+/* In-label red stat used by the carbon row (e.g. "· 96 mismatches").
+   Defined as a class so the JS doesn't have to inline color styles. */
+.seq-label .seq-label-stat { color: #b00020; }
+
+/* --- stat row at the bottom of every demo --- */
+.stat-row {
+  display: flex; flex-wrap: wrap; gap: 24px;
+  margin-top: 14px; padding-top: 12px; border-top: 1px solid #eee;
+  font-family: "JetBrains Mono", monospace; font-size: 11px;
+}
+.stat-pair { display: flex; flex-direction: column; gap: 2px; }
+.stat-pair-label { font-size: 9px; color: #999; text-transform: uppercase; letter-spacing: 1.2px; }
+.stat-pair-val { color: #1f1f1d; font-variant-numeric: tabular-nums; }
+.stat-pair-val.muted { color: #aaa; }
+
+/* --- Sequence display (shared with sandbox, used outside #panel-sandbox) --- */
+.seq-block {
+  font-family: "JetBrains Mono", monospace;
+  background: #f7f7f7; border: 1px solid #e0e0e0;
+  padding: 14px 18px; overflow-x: auto;
+  white-space: pre; font-size: 12px; font-weight: 400;
+  line-height: 1.85; letter-spacing: 1px;
+}
+.seq-block.empty { color: #aaa; font-weight: 300; letter-spacing: normal; }
+.pos { color: #bbb; user-select: none; font-weight: 300; }
+
+/* Mismatch highlighting in reference row (§1, §5). */
+.ref-mismatch { background: rgba(188, 46, 37, 0.18); color: #b00020; }
+.ref-match { color: #999; }

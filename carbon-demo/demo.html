@@ -1,0 +1,2633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carbon · an open-source autoregressive genomic foundation model</title>
+
+<!-- ============================================================ -->
+<!-- Hash router for sibling pages that aren't reachable from the   -->
+<!-- HF Spaces parent URL.                                          -->
+<!--                                                                -->
+<!-- On huggingface.co the demo is loaded as an iframe whose src is -->
+<!-- pinned to the Space's root path; the parent URL accepts a hash -->
+<!-- and forwards it into the iframe but you can't deep-link into   -->
+<!-- /social-banner directly (the parent would treat the slug as a  -->
+<!-- Space subpath and 404). The workaround: ship known hashes from -->
+<!-- the parent and bounce them inside the iframe before the demo   -->
+<!-- starts hydrating. Shareable as e.g.                            -->
+<!--   https://huggingface.co/spaces/<org>/<space>#banner           -->
+<!--                                                                -->
+<!-- This runs synchronously before any <link>/<script> below so    -->
+<!-- there's no flash of the wrong page; documentElement.visibility -->
+<!-- is hidden as a safety net for slow CPUs where the redirect     -->
+<!-- might still race a first paint.                                -->
+<!-- ============================================================ -->
+<script>
+  (function () {
+    var route = (location.hash || "").replace(/^#\/?/, "").toLowerCase();
+    var social = { banner: 1, "social-banner": 1, press: 1, share: 1 };
+    if (route in social) {
+      document.documentElement.style.visibility = "hidden";
+      location.replace("/social-banner" + location.search);
+    }
+  })();
+</script>
+
+<!-- ============================================================ -->
+<!-- Discoverability: SEO + social previews + AI-agent metadata.  -->
+<!-- {{SITE_URL}} is substituted at request time by app.py with   -->
+<!-- the absolute base URL (scheme + host) the page was served    -->
+<!-- under, so og:image / og:url stay correct whether we're on    -->
+<!-- the HF Space, a preview deploy, or localhost.                -->
+<!-- ============================================================ -->
+<meta name="description" content="Carbon is Hugging Face's open-source family of autoregressive genomic foundation models for DNA. Explore an interactive demo of what the 3B checkpoint learned: streaming continuation, variant effect prediction, ESMFold structure prediction, a UMAP of half a million gene embeddings, and the full training recipe.">
+<meta name="keywords" content="Carbon, DNA, genomics, foundation model, Hugging Face, autoregressive, language model, bioinformatics, variant effect prediction, ESMFold, UMAP, gene embeddings, open source">
+<meta name="author" content="Hugging Face Bio">
+<meta name="theme-color" content="#f7f5ee">
+<meta name="color-scheme" content="light">
+<link rel="canonical" href="{{SITE_URL}}/">
+
+<!-- Favicon. The SVG covers every modern browser engine (Chrome,
+     Safari ≥ 14, Firefox, Edge). We dropped the PNG raster fallback
+     when img/logo.png was retired in favour of img/thumb.png (the
+     dedicated social-card asset), since none of the browsers that
+     still need a raster favicon are in the demo's target audience. -->
+<link rel="icon" type="image/svg+xml" href="/img/logo.svg">
+
+<!-- Open Graph (Facebook, LinkedIn, Slack, Discord, iMessage…).  -->
+<!-- og:image points at /img/thumb.png, the 2x export of the OG   -->
+<!-- preview tile rendered by /social-banner (2392×1258, drop-in  -->
+<!-- 1200×630 ratio at retina resolution).                        -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Carbon">
+<meta property="og:title" content="Carbon · an open-source autoregressive genomic foundation model">
+<meta property="og:description" content="An interactive editorial demo of Carbon, Hugging Face's open-source DNA foundation model. Streaming continuation, variant scoring, protein folding, gene-embedding UMAP, and the full training recipe.">
+<meta property="og:url" content="{{SITE_URL}}/">
+<meta property="og:image" content="{{SITE_URL}}/img/thumb.png">
+<meta property="og:image:width" content="2392">
+<meta property="og:image:height" content="1258">
+<meta property="og:image:alt" content="Carbon — wordmark and four-strand DNA helix on cream paper.">
+<meta property="og:locale" content="en_US">
+
+<!-- Twitter / X card. summary_large_image renders the OG image  -->
+<!-- as a full-bleed preview tile.                               -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:site" content="@huggingface">
+<meta name="twitter:creator" content="@huggingface">
+<meta name="twitter:title" content="Carbon · an open-source autoregressive genomic foundation model">
+<meta name="twitter:description" content="An interactive editorial demo of Carbon, Hugging Face's open-source DNA foundation model. Streaming continuation, variant scoring, protein folding, gene-embedding UMAP, and the full training recipe.">
+<meta name="twitter:image" content="{{SITE_URL}}/img/thumb.png">
+<meta name="twitter:image:alt" content="Carbon — wordmark and four-strand DNA helix on cream paper.">
+
+<!-- JSON-LD structured data. Helps search engines and LLM-      -->
+<!-- powered answer engines (Perplexity, ChatGPT browsing, etc.) -->
+<!-- understand what this page is: a tech article about an open- -->
+<!-- source software model, with links back to its model card,   -->
+<!-- code, and dataset.                                          -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "TechArticle",
+      "@id": "{{SITE_URL}}/#article",
+      "headline": "Carbon · an open-source autoregressive genomic foundation model",
+      "description": "An interactive editorial walkthrough of Carbon, Hugging Face's open-source DNA foundation model: streaming continuation, variant effect prediction, ESMFold-based protein structure prediction, a UMAP of ~500k gene embeddings, and the full training recipe (tokenizer, loss, dataset, results).",
+      "url": "{{SITE_URL}}/",
+      "image": "{{SITE_URL}}/img/thumb.png",
+      "inLanguage": "en",
+      "author": { "@type": "Organization", "name": "Hugging Face Bio", "url": "https://huggingface.co/HuggingFaceBio" },
+      "publisher": { "@type": "Organization", "name": "Hugging Face", "url": "https://huggingface.co" },
+      "about": {
+        "@type": "SoftwareApplication",
+        "name": "Carbon-3B",
+        "applicationCategory": "ScienceApplication",
+        "operatingSystem": "Any",
+        "url": "https://huggingface.co/HuggingFaceBio/Carbon-3B",
+        "description": "Autoregressive genomic foundation model. 3B parameters, 393,216 bp context, 6-mer tokenizer, trained on 1T tokens of DNA across the tree of life.",
+        "license": "https://huggingface.co/HuggingFaceBio/Carbon-3B",
+        "isAccessibleForFree": true
+      },
+      "isPartOf": {
+        "@type": "WebSite",
+        "name": "Carbon",
+        "url": "{{SITE_URL}}/"
+      }
+    }
+  ]
+}
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600&display=swap">
+<!-- 3Dmol.js: lightweight WebGL molecular viewer, used by §5 (folding) to
+     render ESMFold-predicted protein cartoons. Pinned for reproducibility. -->
+<script defer src="https://cdn.jsdelivr.net/npm/3dmol@2.5.1/build/3Dmol-min.js"></script>
+<!-- highlight.js: syntax-highlights the Python snippets inside every
+     <details class="code-snippet"> "Run this from code" block. We load
+     the official browser distribution from the `cdn-release` repo (the
+     /npm/ path serves CommonJS modules that throw `require is not
+     defined` in the browser). Bundle ships Python pre-registered. We
+     intentionally do NOT load a hljs theme stylesheet, code-snippet.css
+     defines our own token colours so the snippets stay on-brand with
+     the editorial palette. -->
+<script defer src="https://cdn.jsdelivr.net/gh/highlightjs/cdn-release@11.9.0/build/highlight.min.js"></script>
+
+<!-- Modular CSS, served from /assets/styles/. Order matters because
+     several keyframes (pulse) and shared atoms (.seq-block, .seq-label,
+     .demo-toolbar) are defined once and consumed by multiple sections;
+     load globals first, then per-section overrides. -->
+<link rel="stylesheet" href="/assets/styles/base.css">
+<link rel="stylesheet" href="/assets/styles/header.css">
+<link rel="stylesheet" href="/assets/styles/banner.css">
+<link rel="stylesheet" href="/assets/styles/layout.css">
+<link rel="stylesheet" href="/assets/styles/controls.css">
+<link rel="stylesheet" href="/assets/styles/sequence.css">
+<link rel="stylesheet" href="/assets/styles/section-intro.css">
+<link rel="stylesheet" href="/assets/styles/section-folding.css">
+<link rel="stylesheet" href="/assets/styles/section-umap.css">
+<link rel="stylesheet" href="/assets/styles/section-tree.css">
+<link rel="stylesheet" href="/assets/styles/section-vep.css">
+<link rel="stylesheet" href="/assets/styles/section-species.css">
+<link rel="stylesheet" href="/assets/styles/section-data.css">
+<link rel="stylesheet" href="/assets/styles/code-snippet.css">
+<link rel="stylesheet" href="/assets/styles/recipe.css">
+<link rel="stylesheet" href="/assets/styles/sandbox.css">
+<link rel="stylesheet" href="/assets/styles/footer.css">
+</head>
+<body>
+
+<!-- Carbon banner. Combines the model-card identity (logo + path + wordmark +
+     subtitle) with the section navigation (Intro / DNA Lab / Carbon Recipe / Sandbox tabs) into a
+     single editorial hero. The DNA helix is rendered on a <canvas> positioned
+     to the right, rotated for a slight technical tilt; see banner.js. -->
+<header class="carbon-banner" aria-label="Carbon DNA model banner">
+  <div class="banner-inner">
+    <div class="banner-left">
+
+      <!-- Top row: HF-style model-card identity. The square logo card mirrors
+           the thumbnail you'd find on a Hugging Face model page; the title +
+           path beside it functions as a breadcrumb / model identifier. -->
+      <div class="banner-identity">
+        <a class="logo-card" href="#" aria-label="Carbon, go to top">
+          <img class="logo-img" src="/img/logo.svg" alt="" width="44" height="44">
+        </a>
+        <div class="banner-breadcrumb">
+          <div class="banner-title">CARBON</div>
+          <div class="banner-path" id="meta">huggingfacebio/carbon-3b</div>
+    </div>
+      </div>
+
+      <!-- Headline: oversized wordmark + tagline. The blinking caret after the
+           "N" is the visual echo of the §1 demo (model streaming a continuation
+           token by token). -->
+      <div class="banner-headline">
+        <h1 class="banner-wordmark"><span>CARBON</span><span class="banner-cursor" aria-hidden="true"></span></h1>
+        <p class="banner-subtitle">Autoregressive Genomic Foundation Model</p>
+        <ul class="banner-specs" aria-label="Model specs">
+          <li class="banner-spec"><strong>393,216</strong> bp context</li>
+          <li class="banner-spec"><strong>6-mer</strong> tokenizer</li>
+          <li class="banner-spec"><strong>1T</strong> train tokens</li>
+        </ul>
+        <ul class="banner-links" aria-label="Resources">
+          <li>
+            <a href="https://huggingface.co/collections/HuggingFaceBio/carbon" target="_blank" rel="noopener">
+              Models<span class="arrow" aria-hidden="true">↗</span>
+            </a>
+          </li>
+          <li>
+            <a href="https://huggingface.co/datasets/HuggingFaceBio/carbon-pretraining-corpus" target="_blank" rel="noopener">
+              Dataset<span class="arrow" aria-hidden="true">↗</span>
+            </a>
+          </li>
+          <li>
+            <a href="https://paperswithcode.co/paper/83340" target="_blank" rel="noopener">
+              Tech report<span class="arrow" aria-hidden="true">↗</span>
+            </a>
+          </li>
+          <li>
+            <a href="https://github.com/huggingface/carbon" target="_blank" rel="noopener">
+              Code<span class="arrow" aria-hidden="true">↗</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Tabs anchored to the bottom of the banner; they sit on the hairline
+           that separates the banner from the page content (margin-bottom: -1px). -->
+      <nav id="tab-nav" class="banner-tabs">
+      <button class="tab active" data-tab="intro">Intro</button>
+      <button class="tab" data-tab="dna-lab">DNA Lab</button>
+      <button class="tab" data-tab="recipe">Carbon Recipe</button>
+      <button class="tab" data-tab="sandbox">Sandbox</button>
+    </nav>
+  </div>
+
+    <!-- Big vertical DNA helix on the right. The canvas paints upright; CSS
+         applies a small clockwise tilt for a "blueprint-on-the-bench" feel. -->
+    <div class="banner-helix" aria-hidden="true">
+      <canvas class="cb-helix-canvas"></canvas>
+    </div>
+  </div>
+</header>
+
+<!-- Sticky tab strip: a duplicate of the in-banner nav that slides down from
+     the top once the user has scrolled past the original tabs. Kept in sync
+     with the in-banner set via tabs.js (both NodeLists are wired to the same
+     setTab() handler). The body gets .is-tabs-stuck toggled by an
+     IntersectionObserver watching the original #tab-nav. -->
+<nav id="tab-nav-sticky" class="sticky-nav" aria-label="Section navigation (sticky)">
+  <div class="sticky-nav__inner">
+    <!-- Mini breadcrumb on the left: same identity as the in-banner
+         .banner-breadcrumb (title + model path stacked) so the sticky
+         strip carries the "you're on the Carbon model card" cue even
+         after the hero has scrolled out of view. -->
+    <a class="sticky-nav__brand" href="#" aria-label="Carbon, go to top">
+      <span class="banner-title">CARBON</span>
+      <span class="banner-path">huggingfacebio/carbon-3b</span>
+    </a>
+    <div class="sticky-nav__tabs">
+      <button class="tab active" data-tab="intro">Intro</button>
+      <button class="tab" data-tab="dna-lab">DNA Lab</button>
+      <button class="tab" data-tab="recipe">Carbon Recipe</button>
+      <button class="tab" data-tab="sandbox">Sandbox</button>
+    </div>
+  </div>
+</nav>
+
+<!-- ============================================================ -->
+<!-- INTRO TAB · release announcement + tab-navigation guide +    -->
+<!-- optional bio primer ("the central dogma").                   -->
+<!-- ============================================================ -->
+<!-- Default landing tab. The release hero uses .tab-lede so it
+     reads consistently with the existing per-tab intros. The
+     three guide cards under it are buttons (NOT links) wired by
+     sections/intro.js to window.setTab so deep-linking and tab
+     state stay in sync. The bio primer below reuses
+     section--two-col / .demo for visual parity with §1-§7. -->
+<div class="tab-panel active section--intro" id="panel-intro" data-tab="intro">
+
+  <!-- Hero: two-column split. Left rail (eyebrow + announcement) is sticky
+       so the message stays in view while the visitor scrolls past the
+       Pareto figure on the right. The figure was previously stacked
+       beneath the text inside .tab-lede__rail; the split layout pulls
+       it out as a sibling so the two read as anchor + evidence. -->
+  <div class="tab-lede tab-lede--split">
+    <div class="tab-lede__rail">
+      <h2 class="tab-lede__title">The fastest open-source foundation model for DNA.</h2>
+      <p>
+        Today we're releasing <strong>Carbon</strong> — three model sizes
+        (<em>500M</em>, <em>3B</em>, and <em>8B</em> parameters), shipping with the full
+        training code, the data pipeline, and the model weights.
+        All open-source on the Hugging Face Hub.
+      </p>
+      <!-- Figure caption pulled out of the right-column .tab-lede__figure
+           so the descriptive sentence sits under the announcement prose
+           instead of dangling below the chart. The visual flow is
+           lede → context paragraph → figure caption, all in the same
+           column; the chart on the right reads as the visual evidence
+           the prose is referring to. -->
+      <p class="tab-lede__figcaption">
+        <span class="pareto-figcaption-tag">Fig · Benchmark</span>
+        Throughput (base pairs per second, log scale) vs win rate across open DNA foundation models. Carbon 3B matches Evo2 7B's win rate at roughly 275× the throughput.
+      </p>
+    </div>
+    <!-- Pareto chart, drawn natively as inline SVG so the figure scales
+           sharply, picks up the page's typography, and can be tuned in
+           CSS without a matplotlib re-export. Source data lives in
+           pareto/pareto_data.csv; geometry mirrors the matplotlib
+           reference (scratch/plot_pareto_winrate_throughput_8b_32k_hf.py):
+           log-scale throughput on x, linear win-rate % on y, family
+           badges sitting on each data point with a plain text label
+           below. Chrome is pulled back to match the editorial blog
+           tone — hairline frame + tick lines, mono tabular tick
+           labels, mono-uppercase "better/faster" eyebrow indicator —
+           and the data labels use a paint-order halo (see
+           .pareto-label in section-intro.css) instead of pill boxes.
+           Carbon points scale up + use a heavier label per the source
+           script's HIGHLIGHT_LOGO_SCALE so the eye lands on them. -->
+      <figure class="tab-lede__figure tab-lede__figure--pareto">
+        <!-- viewBox tightly cropped around the actual visible content
+             (rotated "Win rate (%)" Y title, "100" Y tick label, rightmost
+             data label "GENERator-v2 1.2B", and "Throughput" X title
+             descender). No internal margin is left inside the SVG itself —
+             the visual breathing around the chart is provided entirely by
+             the parent .tab-lede__figure--pareto's 24px card padding (see
+             section-intro.css), otherwise we'd be stacking SVG margins
+             onto CSS padding and the chart would read as floating inside
+             an oversized frame. The data coordinates further down still
+             use the original 1000×600 reference grid; only the visible
+             window is shifted/shrunk. -->
+        <svg
+          class="pareto-chart"
+          viewBox="20 50 910 530"
+          xmlns="http://www.w3.org/2000/svg"
+          role="img"
+          aria-labelledby="pareto-title pareto-desc"
+        >
+          <title id="pareto-title">Throughput vs win rate across open DNA foundation models</title>
+          <desc id="pareto-desc">Log-scale throughput in base pairs per second on the x-axis and win-rate percentage on the y-axis. Carbon 3B and 8B sit at roughly 275 times the throughput of Arc Evo2 7B at comparable or better win rates.</desc>
+
+          <!-- Plot interior. -->
+          <rect class="pareto-bg" x="100" y="30" width="870" height="470"/>
+
+          <!-- Axis lines · L-shape (left + bottom) bordering the data
+               area. The full rectangular frame is dropped so the chart
+               sits transparent on the page; just the two lines that
+               anchor the ticks remain, the editorial chart minimum. -->
+          <g class="pareto-axis-lines">
+            <line x1="100" y1="30" x2="100" y2="500"/>
+            <line x1="100" y1="500" x2="970" y2="500"/>
+          </g>
+
+          <!-- Y axis: linear win-rate %, ticks at 0/20/40/60/80/100. The
+               plot range runs −12..108 (matches matplotlib padding) so
+               the data points have headroom above 100 and below 0 for
+               labels; only the canonical 0..100 ticks are drawn. -->
+          <g class="pareto-axis pareto-axis--y">
+            <line x1="94" y1="61.3"  x2="100" y2="61.3"/>
+            <line x1="94" y1="139.7" x2="100" y2="139.7"/>
+            <line x1="94" y1="218.0" x2="100" y2="218.0"/>
+            <line x1="94" y1="296.3" x2="100" y2="296.3"/>
+            <line x1="94" y1="374.7" x2="100" y2="374.7"/>
+            <line x1="94" y1="453.0" x2="100" y2="453.0"/>
+            <text x="86" y="61.3">100</text>
+            <text x="86" y="139.7">80</text>
+            <text x="86" y="218.0">60</text>
+            <text x="86" y="296.3">40</text>
+            <text x="86" y="374.7">20</text>
+            <text x="86" y="453.0">0</text>
+          </g>
+
+          <!-- X axis: log10 base pairs/s. x-range chosen to mirror the
+               matplotlib auto-padding (left_pad/right_pad in the source);
+               ticks drop at decade + half-decade boundaries that fall
+               inside the range. -->
+          <g class="pareto-axis pareto-axis--x">
+            <line x1="163.4" y1="500" x2="163.4" y2="506"/>
+            <line x1="263.9" y1="500" x2="263.9" y2="506"/>
+            <line x1="339.9" y1="500" x2="339.9" y2="506"/>
+            <line x1="415.9" y1="500" x2="415.9" y2="506"/>
+            <line x1="516.4" y1="500" x2="516.4" y2="506"/>
+            <line x1="592.4" y1="500" x2="592.4" y2="506"/>
+            <line x1="668.5" y1="500" x2="668.5" y2="506"/>
+            <line x1="768.9" y1="500" x2="768.9" y2="506"/>
+            <line x1="844.9" y1="500" x2="844.9" y2="506"/>
+            <line x1="920.9" y1="500" x2="920.9" y2="506"/>
+            <text x="163.4" y="520">200</text>
+            <text x="263.9" y="520">500</text>
+            <text x="339.9" y="520">1k</text>
+            <text x="415.9" y="520">2k</text>
+            <text x="516.4" y="520">5k</text>
+            <text x="592.4" y="520">10k</text>
+            <text x="668.5" y="520">20k</text>
+            <text x="768.9" y="520">50k</text>
+            <text x="844.9" y="520">100k</text>
+            <text x="920.9" y="520">200k</text>
+          </g>
+
+          <!-- Plot frame drawn after the axis grid so the thick black
+               border sits cleanly on top of the tick lines. -->
+          <rect class="pareto-frame" x="100" y="30" width="870" height="470"/>
+
+          <!-- Axes-of-improvement indicator: a small ⌐ of grey arrows in
+               the lower-left labelled "better"/"faster", same as the
+               matplotlib reference. Placed at the 0-winrate gridline,
+               just inside the y-axis. -->
+          <g class="pareto-indicator" transform="translate(170 450)">
+            <line x1="0" y1="0" x2="0" y2="-70"/>
+            <polygon points="0,-78 -7,-66 7,-66"/>
+            <text class="pareto-indicator-text" transform="translate(-14 -35) rotate(-90)">better</text>
+            <line x1="0" y1="0" x2="70" y2="0"/>
+            <polygon points="78,0 66,-7 66,7"/>
+            <text class="pareto-indicator-text" x="35" y="20">faster</text>
+          </g>
+
+          <!-- 275× speedup callout: a single horizontal arrow from
+               just-right-of Evo2 7B to just-left-of Carbon 3B, split in
+               two segments around a centred "275×" label that sits
+               on-axis. The label cuts the shaft instead of floating
+               above it, so the number reads as part of the arrow
+               itself. y=215 lands between Evo2 7B (64.3%) and Carbon
+               3B (59.5%) so the arrow reads level with both endpoints. -->
+          <g class="pareto-speedup">
+            <line x1="290" y1="215" x2="508" y2="215"/>
+            <line x1="618" y1="215" x2="822" y2="215"/>
+            <polygon points="836,215 820,206 820,224"/>
+            <text class="pareto-speedup-label" x="563" y="218">275×</text>
+          </g>
+
+          <!-- Data points. Coordinates baked in from pareto_data.csv:
+               x = 100 + (log10(T) − 2.0499) / 3.4452 × 870
+               y = 500 − (win_rate + 12) × 3.9167
+               Logos sit centered on each point (32×32 for non-highlight,
+               43×43 for Carbon). Labels are pinned below the logo. -->
+
+          <!-- Evo2 20B · 177.5 bp/s, 95.24% -->
+          <g class="pareto-point">
+            <image href="/img/arc.webp" x="134.3" y="64.0" width="32" height="32"/>
+            <text class="pareto-label" x="150.3" y="110">Evo2 20B</text>
+          </g>
+
+          <!-- Evo2 7B · 453.8 bp/s, 64.29% -->
+          <g class="pareto-point">
+            <image href="/img/arc.webp" x="237.3" y="185.2" width="32" height="32"/>
+            <text class="pareto-label" x="253.3" y="231">Evo2 7B</text>
+          </g>
+
+          <!-- Evo2 1B · 1342.5 bp/s, 2.38% -->
+          <g class="pareto-point">
+            <image href="/img/arc.webp" x="356.2" y="427.7" width="32" height="32"/>
+            <text class="pareto-label" x="372.2" y="473">Evo2 1B</text>
+          </g>
+
+          <!-- GENERator-v2 3B · 98494.4 bp/s, 35.71% -->
+          <g class="pareto-point">
+            <image href="/img/generator.webp" x="828.7" y="297.1" width="32" height="32"/>
+            <text class="pareto-label" x="844.7" y="343">GENERator-v2 3B</text>
+          </g>
+
+          <!-- GENERator-v2 1.2B · 123219.2 bp/s, 14.29% -->
+          <g class="pareto-point">
+            <image href="/img/generator.webp" x="853.3" y="381.0" width="32" height="32"/>
+            <text class="pareto-label" x="869.3" y="427">GENERator-v2 1.2B</text>
+          </g>
+
+          <!-- Carbon 8B · 76582.7 bp/s, 78.57% (highlighted) -->
+          <g class="pareto-point pareto-point--highlight">
+            <image href="/img/logo.svg" x="795.6" y="123.7" width="43" height="43"/>
+            <text class="pareto-label" x="817.1" y="180">Carbon 8B</text>
+          </g>
+
+          <!-- Carbon 3B · 125130.8 bp/s, 59.52% (highlighted) -->
+          <g class="pareto-point pareto-point--highlight">
+            <image href="/img/logo.svg" x="849.5" y="198.3" width="43" height="43"/>
+            <text class="pareto-label" x="871.0" y="255">Carbon 3B</text>
+          </g>
+
+          <!-- Axis titles. Y title rotated -90 along the left margin,
+               X title centred under the X axis. The italic "Base pairs
+               per second" subtitle that used to sit under "Throughput"
+               was removed: the units carry less weight than the
+               headline measure, and the chart reads cleaner without it. -->
+          <text class="pareto-axis-title" transform="translate(34 265) rotate(-90)">Win rate (%)</text>
+          <text class="pareto-axis-title" x="535" y="572">Throughput</text>
+        </svg>
+      </figure>
+  </div>
+
+  <!-- Site map · full-width independent band that signposts the four
+       destinations of the page (Intro primer / DNA Lab / Carbon Recipe /
+       Sandbox). Pulled out of .container.wide so the band can extend
+       edge-to-edge with its own paper tone, reading as the deliberate
+       hand-off between the release lede above and the bio primer below.
+       Each step is a numbered card with a mono uppercase label and a
+       short gloss; the anchors still feed tabs.js's hashchange listener
+       (#primer scroll-anchors here, #dna-lab/#recipe/#sandbox switch tab). -->
+  <nav class="intro-sitemap" aria-label="Site map">
+    <div class="intro-sitemap__inner">
+      <header class="intro-sitemap__heading">
+        <span class="intro-sitemap__eyebrow">Site map</span>
+        <h2 class="intro-sitemap__title">What's inside</h2>
+        <p class="intro-sitemap__subtitle">Four ways to explore Carbon, from background to hands-on.</p>
+      </header>
+      <ol class="intro-sitemap__steps">
+        <li class="intro-sitemap__step">
+          <a class="intro-sitemap__link" href="#primer">
+            <span class="intro-sitemap__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 5.5h6.5a2.5 2.5 0 0 1 2.5 2.5V20"/>
+                <path d="M21 5.5h-6.5A2.5 2.5 0 0 0 12 8"/>
+                <path d="M3 5.5V18a1 1 0 0 0 1 1h6"/>
+                <path d="M21 5.5V18a1 1 0 0 1-1 1h-6"/>
+                <path d="M6 9h3.5"/>
+                <path d="M6 12h3.5"/>
+                <path d="M14.5 9H18"/>
+                <path d="M14.5 12H18"/>
+              </svg>
+            </span>
+            <span class="intro-sitemap__label">
+              <span class="intro-sitemap__title">Intro</span>
+              <span class="intro-sitemap__arrow" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M5 12h14"/>
+                  <path d="M13 6l6 6-6 6"/>
+                </svg>
+              </span>
+            </span>
+            <span class="intro-sitemap__desc">A short primer on the basics of genetics — the alphabet Carbon reads.</span>
+          </a>
+        </li>
+        <li class="intro-sitemap__step">
+          <a class="intro-sitemap__link" href="#dna-lab">
+            <span class="intro-sitemap__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M8 3c0 4 8 4.5 8 9s-8 5-8 9"/>
+                <path d="M16 3c0 4-8 4.5-8 9s8 5 8 9"/>
+                <path d="M9 5h6"/>
+                <path d="M10 7.5h4"/>
+                <path d="M8.5 10.5h7"/>
+                <path d="M8.5 13.5h7"/>
+                <path d="M10 16.5h4"/>
+                <path d="M9 19h6"/>
+              </svg>
+            </span>
+            <span class="intro-sitemap__label">
+              <span class="intro-sitemap__title">DNA Lab</span>
+              <span class="intro-sitemap__arrow" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M5 12h14"/>
+                  <path d="M13 6l6 6-6 6"/>
+                </svg>
+              </span>
+            </span>
+            <span class="intro-sitemap__desc">Live interactions with the 3B checkpoint: explore what the model can do.</span>
+          </a>
+        </li>
+        <li class="intro-sitemap__step">
+          <a class="intro-sitemap__link" href="#recipe">
+            <span class="intro-sitemap__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 3h6"/>
+                <path d="M10 3v6.4L4.7 18.5a1.5 1.5 0 0 0 1.3 2.3h12a1.5 1.5 0 0 0 1.3-2.3L14 9.4V3"/>
+                <path d="M7.3 14h9.4"/>
+                <circle cx="10" cy="17" r="0.9" fill="currentColor" stroke="none"/>
+                <circle cx="13.6" cy="17.8" r="0.9" fill="currentColor" stroke="none"/>
+              </svg>
+            </span>
+            <span class="intro-sitemap__label">
+              <span class="intro-sitemap__title">Carbon Recipe</span>
+              <span class="intro-sitemap__arrow" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M5 12h14"/>
+                  <path d="M13 6l6 6-6 6"/>
+                </svg>
+              </span>
+            </span>
+            <span class="intro-sitemap__desc">How Carbon was trained: tokenizer, loss, dataset, and results.</span>
+          </a>
+        </li>
+        <li class="intro-sitemap__step">
+          <a class="intro-sitemap__link" href="#sandbox">
+            <span class="intro-sitemap__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4.5" width="18" height="15" rx="2"/>
+                <path d="M7 10l3 2-3 2"/>
+                <path d="M13 14h4"/>
+              </svg>
+            </span>
+            <span class="intro-sitemap__label">
+              <span class="intro-sitemap__title">Sandbox</span>
+              <span class="intro-sitemap__arrow" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M5 12h14"/>
+                  <path d="M13 6l6 6-6 6"/>
+                </svg>
+              </span>
+            </span>
+            <span class="intro-sitemap__desc">Run Carbon on your own DNA sequences, end-to-end.</span>
+          </a>
+        </li>
+      </ol>
+    </div>
+  </nav>
+
+  <div class="container wide">
+
+    <!-- Optional bio primer below. Subsections are §1-§5 within this tab.
+         id="primer" so the "Intro → continue reading…" link in the
+         site map above can scroll-anchor here via tabs.js's SECTION_TO_TAB
+         routing. -->
+    <div class="intro-primer-heading" id="primer">
+      <div class="section-num">Background</div>
+      <h2>What Carbon reads</h2>
+      <!-- Standfirst: editorial lede framed by a green left-rule (same motif
+           as .takeaway in layout.css). The four bases are surfaced as mono
+           tokens using the conventional sequence-viewer palette shared with
+           tokenizer.js (A green / C blue / G amber / T pink) so the primer
+           opens with the same visual vocabulary used throughout the demo.
+           The final sentence is isolated as a kicker — it carries the thesis
+           of the whole tab ("what they mean is what it has to learn") and
+           deserves its own visual beat. -->
+      <div class="intro-primer-lede">
+        <p>
+          <!-- data-letter (not data-base): intro.js auto-injects the
+               skeletal-formula molecule SVGs into every [data-base]
+               element it finds inside the intro root. We just want
+               coloured mono glyphs here, not the full molecule
+               diagrams that live in the §1 demo card below. -->
+          The model is fed long strings of four letters:
+          <span class="intro-base" data-letter="A">A</span>,
+          <span class="intro-base" data-letter="C">C</span>,
+          <span class="intro-base" data-letter="G">G</span>,
+          <span class="intro-base" data-letter="T">T</span>.
+          Those letters are the bases of <em>DNA</em>. Stretches of it are <em>genes</em>,
+          which cells copy into <em>RNA</em> and translate into <em>proteins</em>.
+          A century of molecular biology has been spent working out how.
+          Carbon is given only the letters.
+        </p>
+        <p class="intro-primer-lede__kicker">
+          What they mean is what it has to learn.
+        </p>
+      </div>
+    </div>
+
+    <!-- §0.1 · BASES -->
+    <div class="section--two-col intro-subsection">
+      <div class="section-narrative">
+        <div class="section-num">§1 · Bases</div>
+        <div class="section-title">A four-letter alphabet</div>
+        <p class="lede">
+          DNA is written in <em>four small molecules</em>: adenine, cytosine, guanine, thymine.
+          Two are purines (A and G, twin-ring), two are pyrimidines (C and T, single-ring).
+          Everything that follows is built from these four.
+        </p>
+      </div>
+      <div class="section-body">
+        <div class="demo">
+          <div class="cd-mols">
+            <div class="cd-mol-wrap"><div class="cd-mol-svg" data-base="A"></div><div class="cd-mol-label"><b>A</b> adenine</div></div>
+            <div class="cd-mol-wrap"><div class="cd-mol-svg" data-base="C"></div><div class="cd-mol-label"><b>C</b> cytosine</div></div>
+            <div class="cd-mol-wrap"><div class="cd-mol-svg" data-base="G"></div><div class="cd-mol-label"><b>G</b> guanine</div></div>
+            <div class="cd-mol-wrap"><div class="cd-mol-svg" data-base="T"></div><div class="cd-mol-label"><b>T</b> thymine</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- §0.2 · DNA -->
+    <div class="section--two-col intro-subsection">
+      <div class="section-narrative">
+        <div class="section-num">§2 · DNA</div>
+        <div class="section-title">The double helix</div>
+        <p class="lede">
+          Each base hangs off a sugar-phosphate backbone. Two backbones run anti-parallel and
+          <em>twist</em> into a double helix. The bases on opposite strands pair by chemistry:
+          <em>A always with T, G always with C</em>, so one strand fully determines the other.
+          A human genome is about <em>3 billion</em> base pairs of this.
+        </p>
+      </div>
+      <div class="section-body">
+        <div class="demo">
+          <div class="cd-helix-wrap" data-helix></div>
+          <!-- Pairing legend: two big A=T / G≡C tiles with an H-bond
+               sub-label that turns the visual difference between =
+               and ≡ into the actual chemistry (2 vs 3 hydrogen bonds).
+               Caption sits below the pair row, centred. -->
+          <div class="cd-helix-rules">
+            <div class="cd-helix-rules-pairs">
+              <div class="cd-pair">
+                <div class="cd-pair-formula"><span class="cd-pair-letter">A</span><span class="cd-pair-bond">═</span><span class="cd-pair-letter">T</span></div>
+                <div class="cd-pair-meta">2 H bonds</div>
+              </div>
+              <div class="cd-pair">
+                <div class="cd-pair-formula"><span class="cd-pair-letter">G</span><span class="cd-pair-bond">≡</span><span class="cd-pair-letter">C</span></div>
+                <div class="cd-pair-meta">3 H bonds</div>
+              </div>
+            </div>
+            <div class="cd-pair-caption">complementary base pairing</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- §0.3 · GENE -->
+    <div class="section--two-col intro-subsection">
+      <div class="section-narrative">
+        <div class="section-num">§3 · Gene</div>
+        <div class="section-title">Promoter, exons, introns</div>
+        <p class="lede">
+          A gene is a stretch of DNA that the cell turns into protein. Most of the genome is
+          not. Each gene begins with a <em>promoter</em>, where the cell starts reading. What
+          follows is broken into two kinds of segment: <em>exons</em>, which the cell keeps,
+          and <em>introns</em>, which it splices out and often serve regulatory purposes.
+        </p>
+      </div>
+      <div class="section-body">
+        <div class="demo">
+          <div class="cd-gene-strip"><span class="cd-genex cd-genex--promoter"><span class="cd-genex-bar"></span><span class="cd-genex-text">TATAAA</span></span><span class="cd-genex cd-genex--exon"><span class="cd-genex-bar"></span><span class="cd-genex-text">ATGGCCGAACTG</span></span><span class="cd-genex cd-genex--intron"><span class="cd-genex-bar"></span><span class="cd-genex-text">GTAAGCATATAG</span></span><span class="cd-genex cd-genex--exon"><span class="cd-genex-bar"></span><span class="cd-genex-text">CCCGGGTGGTTC</span></span><span class="cd-genex cd-genex--intron"><span class="cd-genex-bar"></span><span class="cd-genex-text">GTACGCCATTAG</span></span><span class="cd-genex cd-genex--exon"><span class="cd-genex-bar"></span><span class="cd-genex-text">AGCCGT</span></span></div>
+          <div class="cd-track-labels">
+            <span class="cd-track-labels__title">Legend</span>
+            <span><span class="sw" style="background: var(--promoter)"></span>promoter</span>
+            <span><span class="sw" style="background: var(--green)"></span>exon</span>
+            <span><span class="sw" style="background: transparent; border-top: 1px solid var(--intron); height: 1px; margin-top: 4px;"></span>intron</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- §0.4 · RNA / splicing -->
+    <div class="section--two-col intro-subsection">
+      <div class="section-narrative">
+        <div class="section-num">§4 · RNA</div>
+        <div class="section-title">Splicing into the working copy</div>
+        <p class="lede">
+          The cell copies the gene into RNA. Then it <em>splices out the introns</em> and
+          <em>joins the exons together</em>. What's left is the working mRNA: just the exons,
+          in order. (T is rewritten as U along the way: a small alphabet quirk between DNA
+          and RNA.)
+        </p>
+      </div>
+      <div class="section-body">
+        <div class="demo">
+          <div class="cd-splice">
+            <div class="cd-gene-strip"><span class="cd-genex cd-genex--promoter"><span class="cd-genex-bar"></span><span class="cd-genex-text">TATAAA</span></span><span class="cd-genex cd-genex--exon"><span class="cd-genex-bar"></span><span class="cd-genex-text">ATGGCCGAACTG</span></span><span class="cd-genex cd-genex--intron"><span class="cd-genex-bar"></span><span class="cd-genex-text">GTAAGCATATAG</span></span><span class="cd-genex cd-genex--exon"><span class="cd-genex-bar"></span><span class="cd-genex-text">CCCGGGTGGTTC</span></span><span class="cd-genex cd-genex--intron"><span class="cd-genex-bar"></span><span class="cd-genex-text">GTACGCCATTAG</span></span><span class="cd-genex cd-genex--exon"><span class="cd-genex-bar"></span><span class="cd-genex-text">AGCCGT</span></span></div>
+            <svg class="cd-splice-arrows" viewBox="0 0 60 6" aria-hidden="true">
+              <text x="0.5" y="2.2" font-family='"JetBrains Mono", monospace' font-size="1.4" font-weight="500" fill="#5b5b56">transcribe</text>
+              <g fill="none" stroke="#317f3f" stroke-width="0.2" stroke-linecap="round">
+                <path d="M 12 0 C 12 3, 21 3, 21 5"/>
+                <path d="M 36 0 C 36 3, 33 3, 33 5"/>
+                <path d="M 57 0 C 57 3, 42 3, 42 5"/>
+              </g>
+              <g fill="#317f3f">
+                <polygon points="20.3,5 21.7,5 21,6"/>
+                <polygon points="32.3,5 33.7,5 33,6"/>
+                <polygon points="41.3,5 42.7,5 42,6"/>
+              </g>
+            </svg>
+            <div class="cd-gene-strip cd-mrna-strip"><span class="cd-genex cd-genex--exon"><span class="cd-genex-bar"></span><span class="cd-genex-text">AUGGCCGAACUG</span></span><span class="cd-genex cd-genex--exon"><span class="cd-genex-bar"></span><span class="cd-genex-text">CCCGGGUGGUUC</span></span><span class="cd-genex cd-genex--exon"><span class="cd-genex-bar"></span><span class="cd-genex-text">AGCCGU</span></span></div>
+          </div>
+          <div class="cd-track-labels">
+            <span class="cd-track-labels__title">Legend</span>
+            <span><span class="sw" style="background: var(--promoter)"></span>promoter</span>
+            <span><span class="sw" style="background: var(--green)"></span>exon</span>
+            <span><span class="sw" style="background: transparent; border-top: 1px solid var(--intron); height: 1px; margin-top: 4px;"></span>intron</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- §0.5 · PROTEIN -->
+    <div class="section--two-col intro-subsection">
+      <div class="section-narrative">
+        <div class="section-num">§5 · Protein</div>
+        <div class="section-title">From chain to function</div>
+        <p class="lede">
+          Every three RNA letters (a <em>codon</em>) encode one <em>amino acid</em>. There are only
+          <em>20</em> amino acids in the standard alphabet; every protein in nature is built from
+          this same set. The chain then folds into a 3D shape, and that shape <em>is</em> the
+          function: hemoglobin · insulin · collagen · antibodies · enzymes.
+        </p>
+      </div>
+      <div class="section-body">
+        <div class="demo">
+          <div class="cd-translate">
+            <span class="cd-trow-label">mRNA</span>
+            <span class="cd-tcodon">AUG</span><span class="cd-tcodon">GCC</span><span class="cd-tcodon">GAA</span><span class="cd-tcodon">CUG</span><span class="cd-tcodon">CCC</span><span class="cd-tcodon">GGG</span><span class="cd-tcodon">UGG</span><span class="cd-tcodon">UUC</span><span class="cd-tcodon">AGC</span><span class="cd-tcodon">CGU</span>
+
+            <span></span>
+            <span class="cd-tarrow">↓</span><span class="cd-tarrow">↓</span><span class="cd-tarrow">↓</span><span class="cd-tarrow">↓</span><span class="cd-tarrow">↓</span><span class="cd-tarrow">↓</span><span class="cd-tarrow">↓</span><span class="cd-tarrow">↓</span><span class="cd-tarrow">↓</span><span class="cd-tarrow">↓</span>
+
+            <span class="cd-trow-label">amino acids</span>
+            <span class="cd-taa">M</span><span class="cd-taa">A</span><span class="cd-taa">E</span><span class="cd-taa">L</span><span class="cd-taa">P</span><span class="cd-taa">G</span><span class="cd-taa">W</span><span class="cd-taa">F</span><span class="cd-taa">S</span><span class="cd-taa">R</span>
+
+            <span></span>
+            <span class="cd-tname">Met</span><span class="cd-tname">Ala</span><span class="cd-tname">Glu</span><span class="cd-tname">Leu</span><span class="cd-tname">Pro</span><span class="cd-tname">Gly</span><span class="cd-tname">Trp</span><span class="cd-tname">Phe</span><span class="cd-tname">Ser</span><span class="cd-tname">Arg</span>
+          </div>
+          <div class="cd-fold-arrow">
+            <div class="cd-fold-arrow-icon">↓</div>
+            <div class="cd-fold-arrow-label">fold</div>
+          </div>
+          <div class="cd-protein-3d" id="cd-protein-3d">
+            <div class="cd-protein-3d-loading">loading hemoglobin…</div>
+          </div>
+          <div class="cd-protein-caption">
+            <div class="cd-protein-caption__title">Human hemoglobin</div>
+            <div class="cd-protein-caption__desc">the molecule that carries oxygen in your blood</div>
+            <div class="cd-protein-caption__meta">4 chains · PDB <a href="https://www.rcsb.org/structure/1A3N" target="_blank" rel="noopener">1A3N</a></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- §0.6 · APPLICATIONS -->
+    <div class="section--two-col intro-subsection">
+      <div class="section-narrative">
+        <div class="section-num">§6 · Applications</div>
+        <div class="section-title">What can the model do in the real world?</div>
+        <p class="lede">
+          A model that understands and writes DNA is useful wherever DNA is the
+          input or the output. This can be used for a variety of tasks, such as 
+          tuning the genetics of the food we grow, designing the regulatory and 
+          coding sequences that drive biomanufacturing, and helping interpret 
+          the variants that show up in clinical sequencing.
+        </p>
+      </div>
+      <div class="section-body">
+        <div class="demo" style="display:grid;gap:14px;padding:18px">
+
+          <div style="padding:14px 16px;background:#fafaf6;border:1px solid #eee;border-radius:3px">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1.4px;text-transform:uppercase;color:#6b7a6e;margin-bottom:6px">Biotechnology · precision breeding</div>
+            <div style="font-weight:600;font-size:14px;margin-bottom:8px;color:#1f1f1d">Crops and livestock</div>
+            <p style="margin:0;font-size:13px;line-height:1.6;color:#3a3a3a">
+              Map genotype to phenotype across crops and livestock: surface the
+              variants that drive yield, quality, disease and pest resistance,
+              and tolerance to drought, heat, cold, or salinity, so breeders
+              can select for them directly.
+            </p>
+          </div>
+
+          <div style="padding:14px 16px;background:#fafaf6;border:1px solid #eee;border-radius:3px">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1.4px;text-transform:uppercase;color:#6b7a6e;margin-bottom:6px">Synthetic biology · biomanufacturing</div>
+            <div style="font-weight:600;font-size:14px;margin-bottom:8px;color:#1f1f1d">Designing what cells express, and how</div>
+            <p style="margin:0;font-size:13px;line-height:1.6;color:#3a3a3a">
+              Design and tune promoters, enhancers, UTRs, and terminators to
+              control expression strength, tissue specificity, timing, and
+              inducibility. The same machinery powers codon optimization and
+              host-specific engineering, letting microbial strains turn out
+              enzymes, chemicals, fuels, antibiotics, and natural products
+              more efficiently.
+            </p>
+          </div>
+
+          <div style="padding:14px 16px;background:#fafaf6;border:1px solid #eee;border-radius:3px">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1.4px;text-transform:uppercase;color:#6b7a6e;margin-bottom:6px">Biomedicine · diagnosis and personalized medicine</div>
+            <div style="font-weight:600;font-size:14px;margin-bottom:8px;color:#1f1f1d">Triaging variants, designing therapies</div>
+            <p style="margin:0;font-size:13px;line-height:1.6;color:#3a3a3a">
+              Help prioritize the variants of uncertain significance that crowd
+              clinical sequencing in rare disease and cancer, where it's often
+              unclear whether a DNA change is actually driving the phenotype.
+              Further out, support patient-tailored therapeutic design: mRNA
+              vaccines, therapeutic proteins, enzymes, and antimicrobial
+              peptides, with expression efficiency, stability, and
+              manufacturability in the loop.
+            </p>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="tab-panel" id="panel-dna-lab" data-tab="dna-lab">
+
+<div class="tab-lede">
+  <div class="tab-lede__rail">
+    <span class="tab-lede__eyebrow">Intro</span>
+    <p>
+      <strong>Carbon-3B</strong> is a 3-billion-parameter language model for DNA. It is trained on
+      roughly 1&nbsp;trillion tokens (6&nbsp;trillion base pairs) of genomic sequence with a simple
+      objective: given some DNA, predict what comes next (six bases at a time, autoregressively).
+      Even though the objective is simple the resulting model is versatile. In the DNA lab you can
+      explore all the cool things we can do with a DNA model.
+    </p>
+    <p class="tab-lede__note">
+      Carbon-3B was trained unsupervised besides some simple tags for species and gene biotypes.
+      It wasn't trained to tell which mutations are pathogenic or how genes differ between species.
+      The sections below highlight what it picked up
+      anyway: autocomplete a gene <a class="lede-chip" href="#completion">§1</a>, see
+      structure emerge in its confidence <a class="lede-chip" href="#track">§2</a>, score
+      a disease variant against a healthy one <a class="lede-chip" href="#vep">§3</a>,
+      recognise a gene's species of origin <a class="lede-chip" href="#species">§4</a>,
+      and then push further into folded protein structure
+      <a class="lede-chip" href="#folding">§5</a>, the embedding manifold
+      <a class="lede-chip" href="#umap">§6</a>, and the species tree
+      <a class="lede-chip" href="#speciesTree">§7</a>. Each demo runs against the public
+      <code>HuggingFaceBio/Carbon-3B</code> checkpoint behind a live inference endpoint.
+    </p>
+  </div>
+</div>
+
+<div class="container wide">
+
+<!-- ============================================================ -->
+<!-- §1 · GENE COMPLETION + ANNOTATION OVERLAY                    -->
+<!-- ============================================================ -->
+<section id="completion" class="section--two-col">
+  <div class="section-narrative">
+  <div class="section-num">§1 · Autocomplete</div>
+  <div class="section-title">Autocomplete for the genome</div>
+  <p class="lede">
+    Same idea as GPT completing a sentence, but for DNA. We feed the model a DNA sequence
+    as input and the model produces an output sequence. The model streams the bases one
+    6-base token at a time. The model is better at predicting sequences of a gene's exons
+    because they are the protein-coding parts of a gene and are under strong evolutionary
+    constraint. As such they should be the most predictable stretches of DNA. The introns
+    serve regulatory purposes on the other hand and are harder to predict. We overlay the
+    <em>real</em> exon/intron annotations on top of the output so you can compare what
+    Carbon produces to what's actually there.
+  </p>
+  </div>
+
+  <div class="section-body">
+  <div class="demo" id="demo1">
+    <div class="demo-toolbar">
+      <span>gene</span>
+      <span id="d1-pills" class="pills"></span>
+      <span class="spacer"></span>
+      <!-- Status sits BEFORE the buttons so that when its text width changes
+           (idle → generating… → done · 432 bp), the slack is absorbed by the
+           flex spacer to its left rather than shifting the buttons leftward
+           on every state transition. Buttons stay pinned to the right edge. -->
+      <span class="status is-hidden" id="d1-status"><span class="dot"></span><span></span></span>
+      <button id="d1-go" class="action primary">▶ generate</button>
+      <button id="d1-stop" class="action" disabled>stop</button>
+    </div>
+
+    <div class="gene-info" id="d1-info">loading genes…</div>
+    <svg class="gene-track draggable" id="d1-track" viewBox="0 0 1000 52" preserveAspectRatio="none"></svg>
+    <div class="track-axis-label" style="justify-content:flex-end;gap:20px;align-items:center">
+      <span class="legend-tip"
+            data-tip="Exon: coding segment of the gene. Stays in the mature mRNA and gets translated into protein."
+            style="display:inline-flex;align-items:center;gap:6px">
+        <svg width="44" height="12" viewBox="0 0 44 12" style="overflow:visible">
+          <line x1="0"  y1="6" x2="14" y2="6" stroke="#aaa" stroke-width="1"/>
+          <rect x="14" y="0" width="16" height="12" fill="#317f3f"/>
+          <line x1="30" y1="6" x2="44" y2="6" stroke="#aaa" stroke-width="1"/>
+        </svg>
+        exon
+      </span>
+      <span class="legend-tip"
+            data-tip="Intron: non-coding stretch between exons. Spliced out of the pre-mRNA before translation."
+            style="display:inline-flex;align-items:center;gap:6px">
+        <svg width="44" height="12" viewBox="0 0 44 12" style="overflow:visible">
+          <rect x="0"  y="0" width="6"  height="12" fill="#317f3f"/>
+          <line x1="6"  y1="6" x2="38" y2="6" stroke="#aaa" stroke-width="1"/>
+          <rect x="38" y="0" width="6"  height="12" fill="#317f3f"/>
+        </svg>
+        intron
+      </span>
+      <span class="legend-tip"
+            data-tip="Drag the dark ▼ and ▲ markers to set the DNA window fed to the model (the prompt). Drag the green ▼ marker to set where generation stops. The model fills in the green region."
+            style="display:inline-flex;align-items:center;gap:6px">
+        <svg width="100" height="20" viewBox="0 0 100 20" style="overflow:visible">
+          <!-- prompt-region (faint dark) between start and end -->
+          <rect x="10" y="4" width="30" height="12" fill="#1f1f1d" opacity="0.06"/>
+          <!-- gen-region (muted green) between end and gen-end -->
+          <rect x="40" y="4" width="50" height="12" fill="#317f3f" opacity="0.15"/>
+          <!-- start handle: ▼ on top, line through body -->
+          <line x1="10" y1="4" x2="10" y2="16" stroke="#1f1f1d" stroke-width="1.5"/>
+          <polygon points="7,0 13,0 10,4" fill="#1f1f1d"/>
+          <!-- end handle: ▲ on bottom, line through body -->
+          <line x1="40" y1="4" x2="40" y2="16" stroke="#1f1f1d" stroke-width="1.5"/>
+          <polygon points="40,16 37,20 43,20" fill="#1f1f1d"/>
+          <!-- gen-end handle: ▼ on top, GREEN, line through body -->
+          <line x1="90" y1="4" x2="90" y2="16" stroke="#317f3f" stroke-width="1.5"/>
+          <polygon points="87,0 93,0 90,4" fill="#317f3f"/>
+        </svg>
+        prompt → generated
+      </span>
+    </div>
+
+    <div class="seq-block" id="d1-seq">pick a gene and hit generate</div>
+    <div class="seq-label">model output  ·  <span style="color:#aaa">prompt in gray</span>  ·  <span>generated colored by logprob (red = uncertain)</span>  ·  <span><span style="color:#317f3f;font-weight:600">_</span> match</span>  ·  <span><span style="color:#b00020;font-weight:600">_</span> mismatch</span></div>
+
+    <div class="stat-row" id="d1-stats">
+      <div class="stat-pair"><span class="stat-pair-label">identity</span><span class="stat-pair-val muted" id="d1-id">·</span></div>
+      <div class="stat-pair"><span class="stat-pair-label">in-exon</span><span class="stat-pair-val muted" id="d1-id-exon">·</span></div>
+      <div class="stat-pair"><span class="stat-pair-label">in-intron</span><span class="stat-pair-val muted" id="d1-id-intron">·</span></div>
+      <div class="stat-pair"><span class="stat-pair-label">tokens</span><span class="stat-pair-val muted" id="d1-tok">·</span></div>
+      <div class="stat-pair"><span class="stat-pair-label">mean logprob</span><span class="stat-pair-val muted" id="d1-lp">·</span></div>
+      <div class="stat-pair"><span class="stat-pair-label">perplexity</span><span class="stat-pair-val muted" id="d1-ppl">·</span></div>
+    </div>
+  </div>
+
+  <div class="takeaway">
+    <p>
+      <strong>Try it</strong>
+      Drag the dark&nbsp;▼ ▲ markers to slide the prompt window and the green&nbsp;▼ to set
+      where generation stops, then hit&nbsp;▶&nbsp;generate. Land the green-shaded region
+      inside an exon (dark green block) and note the count of green-underlined matches;
+      repeat with a similar-length window over an intron and compare.
+    </p>
+    <p>
+      <strong>What to look for</strong>
+      Exons are under selection pressure, so getting them right takes real biological
+      understanding, not just DNA statistics. Boundaries between high- and low-confidence
+      stretches in Carbon's output also tend to fall near real exon/intron edges, even
+      though the model has never seen a single annotation.
+    </p>
+  </div>
+
+  <details class="code-snippet">
+    <summary>Run this from code</summary>
+    <div class="code-snippet__body">
+      <div class="code-snippet__tabs">
+        <button class="code-snippet__tab active" data-tab="endpoint" type="button">API</button>
+        <button class="code-snippet__tab"        data-tab="local"    type="button">transformers</button>
+      </div>
+      <button class="code-snippet__copy" type="button">Copy</button>
+      <div class="code-snippet__panel active" data-tab="endpoint"><pre><code>from huggingface_hub import get_token
+from openai import OpenAI
+
+# Carbon-3B can be served behind any OpenAI-compatible API (vLLM, TGI, an
+# HF inference endpoint, etc.). Point base_url at your deployment.
+client = OpenAI(
+    base_url="https://&lt;your-endpoint&gt;/v1/",
+    api_key=get_token(),
+)
+
+# First ~60 bp of HBB. Replace with whatever gene opening you want.
+prompt = "&lt;dna&gt;AGCCCTCCAGGACAGGCTGCATCAGAAGAGGCCATCAAGCAGGTCTGTTCCAAGGGCCTT"
+
+r = client.completions.create(
+    model="HuggingFaceBio/Carbon-3B",
+    prompt=prompt,
+    max_tokens=10,        # 10 6-mer tokens ~= 60 bp of continuation
+    temperature=0.5, top_p=0.9,
+)
+print(r.choices[0].text)</code></pre></div>
+      <div class="code-snippet__panel" data-tab="local"><pre><code>from transformers import AutoModelForCausalLM, AutoTokenizer
+import torch
+
+tok = AutoTokenizer.from_pretrained(
+    "HuggingFaceBio/Carbon-3B", trust_remote_code=True,
+)
+model = AutoModelForCausalLM.from_pretrained(
+    "HuggingFaceBio/Carbon-3B",
+    trust_remote_code=True,
+    dtype=torch.bfloat16,
+).to("cuda").eval()
+
+prompt = "&lt;dna&gt;AGCCCTCCAGGACAGGCTGCATCAGAAGAGGCCATCAAGCAGGTCTGTTCCAAGGGCCTT"
+inputs = tok(prompt, return_tensors="pt", add_special_tokens=False).to("cuda")
+
+with torch.inference_mode():
+    out = model.generate(
+        **inputs,
+        max_new_tokens=10,        # ~60 bp at 6 bp / token
+        temperature=0.5, top_p=0.9, do_sample=True,
+    )
+
+# Slice off the prompt so we just print the continuation.
+new_ids = out[0, inputs["input_ids"].shape[1]:]
+print(tok.decode(new_ids))</code></pre></div>
+    </div>
+  </details>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- §2 · LIKELIHOOD TRACK ACROSS A REAL GENE                     -->
+<!-- ============================================================ -->
+<section id="track" class="section--two-col">
+  <div class="section-narrative">
+  <div class="section-num">§2 · Structure</div>
+  <div class="section-title">Recognizing gene structure</div>
+  <p class="lede">
+    The Carbon model assigns every 6-base chunk a log-probability under the surrounding
+    context: how "expected" or "likely" that stretch of DNA is. The plot with the scores
+    along a real gene shows the curve dips and rises. We overlay the exon/intron annotation
+    on top: confidence reliably climbs in protein-coding regions and falls in repetitive or
+    unconstrained intronic stretches, even though the model never saw a single label. The
+    same score, summed up, is what powers the variant-effect call in §3 below.
+  </p>
+  </div>
+
+  <div class="section-body">
+  <div class="demo" id="demo3">
+    <!-- Likelihood tracks are precomputed (each gene ships with its
+         token logprobs in data/genes.json), so this toolbar is just
+         the gene selector, selecting a pill renders the track from
+         cache instantly, no live /score call needed. -->
+    <div class="demo-toolbar">
+      <span>gene</span>
+      <span id="d3-pills" class="pills"></span>
+    </div>
+
+    <div class="gene-info" id="d3-info">loading genes…</div>
+    <svg class="gene-track" id="d3-track" viewBox="0 0 1000 40" preserveAspectRatio="none"></svg>
+    <svg id="d3-chart" style="display:block;width:100%;height:140px;background:#fff;border:1px solid #eee;margin-top:6px" preserveAspectRatio="none" viewBox="0 0 1000 140"></svg>
+    <div class="track-axis-label" style="padding-top:8px">
+      <span><span class="legend-swatch" style="background:#317f3f"></span>exon (shaded)</span>
+      <span style="color:#aaa">y-axis: log P per 6-bp token (higher = more confident)</span>
+      <span id="d3-bp-label" style="color:#888">0 bp</span>
+    </div>
+
+    <div class="stat-row" id="d3-stats">
+      <div class="stat-pair"><span class="stat-pair-label">mean (exon)</span><span class="stat-pair-val muted" id="d3-mean-exon">·</span></div>
+      <div class="stat-pair"><span class="stat-pair-label">mean (intron)</span><span class="stat-pair-val muted" id="d3-mean-intron">·</span></div>
+      <div class="stat-pair"><span class="stat-pair-label">Δ (exon − intron)</span><span class="stat-pair-val muted" id="d3-delta">·</span></div>
+      <div class="stat-pair"><span class="stat-pair-label">tokens</span><span class="stat-pair-val muted" id="d3-tokens">·</span></div>
+      <div class="stat-pair"><span class="stat-pair-label">mean (overall)</span><span class="stat-pair-val muted" id="d3-mean">·</span></div>
+    </div>
+  </div>
+
+  <div class="takeaway">
+    <p>
+      <strong>Try it</strong>
+      Pick a gene and watch its per-token confidence curve. Each gene's exons are
+      highlighted in green; the curve underneath is Carbon's log-probability for each 6-base
+      token along the sequence.
+    </p>
+    <p>
+      <strong>What to look for</strong>
+      Exons, especially the protein-coding portions, tend to score noticeably higher than
+      introns because they're evolutionarily conserved and full of constrained patterns the
+      model has learned to predict. The Δ tells you how strongly Carbon "noticed" the
+      difference for this gene. Keep this curve in mind for §3: a variant that flips a base
+      inside a high-confidence exon stretch is the kind of edit that should make Carbon
+      surprised.
+    </p>
+  </div>
+
+  <details class="code-snippet">
+    <summary>Run this from code</summary>
+    <div class="code-snippet__body">
+      <div class="code-snippet__tabs">
+        <button class="code-snippet__tab active" data-tab="endpoint" type="button">API</button>
+        <button class="code-snippet__tab"        data-tab="local"    type="button">transformers</button>
+      </div>
+      <button class="code-snippet__copy" type="button">Copy</button>
+      <div class="code-snippet__panel active" data-tab="endpoint"><pre><code>from huggingface_hub import get_token
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="https://&lt;your-endpoint&gt;/v1/",
+    api_key=get_token(),
+)
+
+# Echoed scoring: forward-pass the prompt and return per-token logprobs
+# (no generation). The score per 6-mer chunk is what the per-base
+# confidence track is built from.
+prompt = "&lt;dna&gt;" + gene_sequence    # full gene, up to ~32k tokens
+
+r = client.completions.create(
+    model="HuggingFaceBio/Carbon-3B",
+    prompt=prompt,
+    max_tokens=0, echo=True, logprobs=1, temperature=0,
+)
+
+for tok, lp in zip(r.choices[0].logprobs.tokens,
+                   r.choices[0].logprobs.token_logprobs):
+    print(f"{tok}\t{lp}")</code></pre></div>
+      <div class="code-snippet__panel" data-tab="local"><pre><code>from transformers import AutoModelForCausalLM, AutoTokenizer
+import torch
+import torch.nn.functional as F
+
+tok = AutoTokenizer.from_pretrained("HuggingFaceBio/Carbon-3B", trust_remote_code=True)
+model = AutoModelForCausalLM.from_pretrained(
+    "HuggingFaceBio/Carbon-3B",
+    trust_remote_code=True,
+    dtype=torch.bfloat16,
+).to("cuda").eval()
+
+ids = tok("&lt;dna&gt;" + gene_sequence, return_tensors="pt",
+          add_special_tokens=False).input_ids.to("cuda")
+
+with torch.inference_mode():
+    logits = model(ids).logits
+
+# Per-token log-prob of the actual next token (the standard "echo" pattern).
+logp = F.log_softmax(logits.float(), dim=-1)[:, :-1, :]
+per_tok_lp = logp.gather(2, ids[:, 1:].unsqueeze(-1)).squeeze(-1)[0]
+for t, lp in zip(tok.convert_ids_to_tokens(ids[0, 1:].tolist()),
+                 per_tok_lp.tolist()):
+    print(f"{t}\t{lp:.3f}")</code></pre></div>
+    </div>
+  </details>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- §3 · VEP: original vs mutation likelihood                    -->
+<!-- ============================================================ -->
+<section id="vep" class="section--two-col">
+  <div class="section-narrative">
+  <div class="section-num">§3 · Variant effect</div>
+  <div class="section-title">Predicting mutation effects</div>
+  <p class="lede">
+    §2 showed that Carbon's per-base confidence rises and falls in step with gene structure.
+    Now we use the same log-likelihood, but as a measure for individual mutations. For a
+    real ClinVar variant we score a ~4&nbsp;kb window of human DNA two ways: once with the
+    original base, once with the mutation. Then we check which version looks more like
+    real, functioning human sequence. Carbon was never trained on what "pathogenic" means;
+    it just learned what natural DNA looks like. Variants that disrupt protein-coding or
+    regulatory function show up as less likely sequence under the model's distribution.
+  </p>
+  </div>
+
+  <div class="section-body">
+  <div class="demo" id="demo2">
+    <div class="demo-toolbar">
+      <span>variant</span>
+      <span id="d2-pills" class="pills"></span>
+    </div>
+
+    <div class="vep-gene-box" id="d2-gene-box">loading variants…</div>
+
+    <div class="vep-window">
+      <!-- Status pill: hidden by default, surfaces when an edit triggers
+           a live rescore (or on the initial auto-score for a variant that
+           isn't yet in the precomputed cache). Lives outside the content
+           div below so it survives the innerHTML rebuilds in vep.js. -->
+      <span class="status is-hidden" id="d2-status"><span class="dot"></span><span></span></span>
+      <div id="d2-window"></div>
+    </div>
+
+    <svg id="d2-bars" style="display:block;width:100%;height:auto;background:#fff;border:1px solid #eee;margin-top:12px" preserveAspectRatio="xMinYMin meet"></svg>
+  </div>
+
+  <div class="takeaway">
+    <p>
+      <strong>Try it</strong>
+      Pick a known variant from the pills, then click any base in the mutation row to
+      introduce a different change. The model re-scores on every edit.
+    </p>
+    <p>
+      <strong>What to look for</strong>
+      Read each row two ways: the <em>dot color</em> is what ClinVar says (red = pathogenic,
+      orange = risk, green = benign); the <em>bar direction</em> is what Carbon says (red bar
+      pointing left = mutation less likely than original; charcoal bar pointing right =
+      mutation looks fine or more likely). Watch the two VHL rows for the cleanest
+      demonstration: a premature stop codon (c.475A>T) swings the bar hundreds of nats to
+      the left, while a common 3' UTR variant (c.*820A>G) in the very same gene sits at
+      zero. Same model, same window length, opposite verdicts. Carbon learned the
+      distinction from raw sequence alone, with no labels.
+    </p>
+  </div>
+
+  <details class="code-snippet">
+    <summary>Run this from code</summary>
+    <div class="code-snippet__body">
+      <div class="code-snippet__tabs">
+        <button class="code-snippet__tab active" data-tab="endpoint" type="button">API</button>
+        <button class="code-snippet__tab"        data-tab="local"    type="button">transformers</button>
+      </div>
+      <button class="code-snippet__copy" type="button">Copy</button>
+      <div class="code-snippet__panel active" data-tab="endpoint"><pre><code>from huggingface_hub import get_token
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="https://&lt;your-endpoint&gt;/v1/",
+    api_key=get_token(),
+)
+
+def score_sum(seq):
+    """Sum of per-token log-probs for the given DNA sequence."""
+    r = client.completions.create(
+        model="HuggingFaceBio/Carbon-3B",
+        prompt="&lt;dna&gt;" + seq,
+        max_tokens=0, echo=True, logprobs=1, temperature=0,
+    )
+    return sum(lp for lp in r.choices[0].logprobs.token_logprobs if lp is not None)
+
+# Score the same ~4 kb window two ways: original vs the one-base mutation.
+delta = score_sum(var_seq) - score_sum(ref_seq)
+print(f"delta = {delta:+.2f}  (less likely if negative)")</code></pre></div>
+      <div class="code-snippet__panel" data-tab="local"><pre><code>from transformers import AutoModelForCausalLM, AutoTokenizer
+import torch
+import torch.nn.functional as F
+
+tok = AutoTokenizer.from_pretrained("HuggingFaceBio/Carbon-3B", trust_remote_code=True)
+model = AutoModelForCausalLM.from_pretrained(
+    "HuggingFaceBio/Carbon-3B",
+    trust_remote_code=True,
+    dtype=torch.bfloat16,
+).to("cuda").eval()
+
+def score_sum(seq):
+    ids = tok("&lt;dna&gt;" + seq, return_tensors="pt",
+              add_special_tokens=False).input_ids.to("cuda")
+    with torch.inference_mode():
+        logits = model(ids).logits
+    logp = F.log_softmax(logits.float(), dim=-1)[:, :-1, :]
+    return logp.gather(2, ids[:, 1:].unsqueeze(-1)).sum().item()
+
+delta = score_sum(var_seq) - score_sum(ref_seq)
+print(f"delta = {delta:+.2f}  (less likely if negative)")</code></pre></div>
+    </div>
+  </details>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- §4 · SAME GENE, DIFFERENT SPECIES                            -->
+<!-- ============================================================ -->
+<section id="species" class="section--two-col">
+  <div class="section-narrative">
+  <div class="section-num">§4 · Species</div>
+  <div class="section-title">Species specific generation</div>
+  <p class="lede">
+    The same gene (insulin, p53) exists in humans, mouse and chicken, but the surrounding
+    sequence has accumulated different mutations along each lineage for hundreds of millions
+    of years. For each species we feed Carbon up to ~400 bp and ask it to continue. Each
+    continuation should match that species' real DNA better than another species' would.
+    The model handles closely-related species well (mouse, chicken, even though they're
+    ~300 My from human); the further you go back in evolutionary time, the more the
+    surrounding sequence drifts and the harder this setup becomes.
+  </p>
+  </div>
+
+  <div class="section-body">
+  <div class="demo" id="demo4">
+    <div class="demo-toolbar">
+      <span>gene</span>
+      <span id="d4-pills" class="pills"></span>
+      <span>prefix</span>
+      <span id="d4-prefix-pills" class="pills">
+        <button class="pill" data-prefix="200">200</button>
+        <button class="pill active" data-prefix="400">400</button>
+        <button class="pill" data-prefix="600">600</button>
+      </span>
+      <span>generate</span>
+      <span id="d4-gen-pills" class="pills">
+        <button class="pill active" data-gen="60">60</button>
+        <button class="pill" data-gen="200">200</button>
+      </span>
+      <span class="spacer"></span>
+      <button id="d4-go" class="action primary">▶ run all</button>
+      <span class="status is-hidden" id="d4-status"><span class="dot"></span><span></span></span>
+    </div>
+
+    <div class="gene-info" id="d4-info">loading species…</div>
+
+    <div id="d4-rows"></div>
+
+    <div class="track-axis-label" style="margin-top:14px">
+      <span style="color:#aaa">prompt in gray</span>
+      <span style="color:#1f1f1d">generated colored by logprob</span>
+      <span style="color:#b00020">mismatches in reference highlighted</span>
+    </div>
+  </div>
+
+  <div class="takeaway">
+    <p>
+      <strong>Try it</strong>
+      Pick a gene shared across species, set the prefix length, then hit <kbd>run all</kbd>
+      to score every species in parallel. Try the same gene at prefix 200 vs 400 and watch
+      the per-species identity respond.
+    </p>
+    <p>
+      <strong>What to look for</strong>
+      With 400 bp of context the model usually recognises which species' DNA it's been
+      given and continues in that species' style; identity to that species' reference often
+      runs 65–90% on the next 60 bp. Cut the prefix to 200 and the signal collapses to
+      near-random: a few hundred bases is what it takes to "lock in" on a lineage.
+      The gap between mouse and chicken is where you can read the evolutionary signal: 300+
+      My since the last common ancestor is enough drift that a 400 bp prefix still locks
+      Carbon in, but the per-base identity sits a notch below mouse.
+    </p>
+  </div>
+
+  <details class="code-snippet">
+    <summary>Run this from code</summary>
+    <div class="code-snippet__body">
+      <div class="code-snippet__tabs">
+        <button class="code-snippet__tab active" data-tab="endpoint" type="button">API</button>
+        <button class="code-snippet__tab"        data-tab="local"    type="button">transformers</button>
+      </div>
+      <button class="code-snippet__copy" type="button">Copy</button>
+      <div class="code-snippet__panel active" data-tab="endpoint"><pre><code>from huggingface_hub import get_token
+from openai import OpenAI
+from concurrent.futures import ThreadPoolExecutor
+
+client = OpenAI(
+    base_url="https://&lt;your-endpoint&gt;/v1/",
+    api_key=get_token(),
+)
+
+def continue_species(species_prefix):
+    r = client.completions.create(
+        model="HuggingFaceBio/Carbon-3B",
+        prompt="&lt;dna&gt;" + species_prefix,
+        max_tokens=10,
+        temperature=0.5, top_p=0.9,
+    )
+    return r.choices[0].text
+
+# species_prefixes = { "human": ..., "mouse": ..., "chicken": ... }
+with ThreadPoolExecutor() as pool:
+    results = dict(zip(species_prefixes, pool.map(continue_species, species_prefixes.values())))
+
+for name, cont in results.items():
+    print(f"{name:10s}  {cont}")</code></pre></div>
+      <div class="code-snippet__panel" data-tab="local"><pre><code>from transformers import AutoModelForCausalLM, AutoTokenizer
+import torch
+
+tok = AutoTokenizer.from_pretrained("HuggingFaceBio/Carbon-3B", trust_remote_code=True)
+model = AutoModelForCausalLM.from_pretrained(
+    "HuggingFaceBio/Carbon-3B",
+    trust_remote_code=True,
+    dtype=torch.bfloat16,
+).to("cuda").eval()
+tok.padding_side = "left"
+if tok.pad_token is None: tok.pad_token = tok.eos_token
+
+# Batch all species in one forward pass via left-padding.
+prompts = ["&lt;dna&gt;" + p for p in species_prefixes.values()]
+enc = tok(prompts, return_tensors="pt", padding=True, add_special_tokens=False).to("cuda")
+
+with torch.inference_mode():
+    out = model.generate(
+        **enc, max_new_tokens=10,
+        temperature=0.5, top_p=0.9, do_sample=True,
+    )
+new_ids = out[:, enc["input_ids"].shape[1]:]
+for name, ids in zip(species_prefixes, new_ids):
+    print(f"{name:10s}  {tok.decode(ids)}")</code></pre></div>
+    </div>
+  </details>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- §5 · FOLDING (DNA → protein → 3D structure via ESMFold)      -->
+<!-- ============================================================ -->
+<section id="folding" class="section--two-col">
+  <div class="section-narrative">
+  <div class="section-num">§5 · Folding</div>
+  <div class="section-title">From DNA to proteins</div>
+  <p class="lede">
+    When Carbon completes a protein coding region in a gene, the resulting bases translate
+    to a protein: a protein that folds. We feed the resulting sequence into ESMFold
+    (similar to AlphaFold) and render the 3D structure inline, alongside the same protein
+    folded from the reference sequence so you can see whether Carbon's continuation
+    produced something similar.
+  </p>
+  </div>
+
+  <div class="section-body">
+  <div class="demo" id="demoFold">
+    <!-- Cached-only UI: live fold UI (prefix selector, ▶ fold button,
+         status indicator) is intentionally not rendered. The pipeline
+         JS (runFold/streamGenerate/postFold) and the backend /fold
+         endpoint are still in place, see commit history or app.py if
+         you want to wire interactivity back in. -->
+    <div class="demo-toolbar">
+      <span>gene</span>
+      <span id="dfold-pills" class="pills"></span>
+    </div>
+
+    <div class="gene-info" id="dfold-info">loading genes…</div>
+    <!-- Materialises the §5 lede's "75% prompt → 25% prediction → fold"
+         pipeline for the currently selected gene, so the visitor sees how
+         many bp Carbon was given vs how many it had to predict before any
+         folding happens. -->
+    <div class="mrna-info" id="dfold-mrna">·</div>
+
+    <div class="fold-aa-grid">
+      <div class="fold-aa-col">
+        <div class="seq-label" id="dfold-aa-label">
+          <span class="seq-tag carbon">carbon</span>
+          <span class="aa-len-tag">· aa</span>
+        </div>
+        <div class="seq-block" id="dfold-aa">click fold</div>
+      </div>
+      <div class="fold-aa-col">
+        <div class="seq-label" id="dfold-ref-aa-label">
+          <span class="seq-tag ref">reference</span>
+          <span class="aa-len-tag">· aa</span>
+        </div>
+        <div class="seq-block" id="dfold-ref-aa">·</div>
+      </div>
+    </div>
+    <div class="fold-aa-legend">
+      <span class="fold-aa-legend-swatch" aria-hidden="true"></span>
+      <span>mismatches vs reference</span>
+      <span class="fold-aa-legend-sep" aria-hidden="true">·</span>
+      <span>aligned position by position</span>
+    </div>
+
+    <div class="fold-grid">
+      <div class="fold-viewer-col">
+        <div class="fold-viewer-label">carbon completion</div>
+        <div class="fold-viewer" id="dfold-viewer-carbon">
+          <div class="fold-empty">no structure yet</div>
+        </div>
+      </div>
+      <div class="fold-viewer-col">
+        <div class="fold-viewer-label">reference</div>
+        <div class="fold-viewer" id="dfold-viewer-ref">
+          <div class="fold-empty">no structure yet</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="fold-legend">
+      pLDDT
+      <span class="fold-legend-bar" aria-hidden="true"></span>
+      low → high · drag to rotate
+    </div>
+
+    <div class="stat-row" id="dfold-stats">
+      <div class="stat-pair"><span class="stat-pair-label">residues</span><span class="stat-pair-val muted" id="dfold-n">·</span></div>
+      <div class="stat-pair"><span class="stat-pair-label">pLDDT mean (carbon)</span><span class="stat-pair-val muted" id="dfold-plddt-c">·</span></div>
+      <div class="stat-pair"><span class="stat-pair-label">pLDDT mean (ref)</span><span class="stat-pair-val muted" id="dfold-plddt-r">·</span></div>
+      <div class="stat-pair"><span class="stat-pair-label">identity (1D)</span><span class="stat-pair-val muted" id="dfold-id">·</span></div>
+    </div>
+  </div>
+
+  <div class="takeaway">
+    <strong>What to look for</strong>
+    A high <em>pLDDT</em> means ESMFold is confident in the predicted structure
+    at that residue. The interesting case is when Carbon's completion <em>diverges
+    at the base level</em> &mdash; sometimes drastically, like CFTR at ~22% identity &mdash;
+    but still folds with high confidence into a shape that mirrors the reference
+    backbone. That's the model reaching past memorization for the structural
+    grammar underneath the sequence.
+  </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- §6 · UMAP (interactive scatter)                              -->
+<!-- ============================================================ -->
+<section id="umap" class="section--two-col">
+  <div class="section-narrative">
+  <div class="section-num">§6 · Embedding space</div>
+  <div class="section-title">Mapping out genomes</div>
+  <p class="lede">
+    We embed 571,810 genes from 27 species across six kingdoms (vertebrates,
+    invertebrates, plants, fungi, bacteria, viruses) with Carbon, project to 2D with UMAP,
+    color by attributes. Depending on the attribute, different kinds of organizations
+    emerge from the same points: the model's embedding space encodes multiple axes of
+    biology at once, most of which were never labeled.
+  </p>
+  </div>
+
+  <div class="section-body">
+  <div class="demo" id="demoUmap">
+    <div class="demo-toolbar">
+      <span>color by</span>
+      <span id="dumap-color-pills" class="pills">
+        <button class="pill active" data-color="species">species</button>
+        <button class="pill" data-color="biotype">biotype</button>
+        <button class="pill" data-color="strand">strand</button>
+        <button class="pill" data-color="gc">gc content</button>
+        <button class="pill" data-color="length">gene length</button>
+      </span>
+      <span class="spacer"></span>
+      <button id="dumap-reset" class="action" disabled>↺ reset view</button>
+    </div>
+
+    <div class="demo-toolbar umap-highlight-toolbar">
+      <span>highlights</span>
+      <span id="dumap-highlight-pills" class="pills"></span>
+    </div>
+
+    <p class="umap-mode-desc" id="dumap-mode-desc"></p>
+
+    <div class="umap-frame">
+      <canvas class="umap-canvas" id="dumap-canvas"></canvas>
+      <div class="umap-annotations" id="dumap-annotations"></div>
+      <div class="umap-tooltip" id="dumap-tooltip"></div>
+      <div class="umap-status-overlay" id="dumap-overlay">loading 571K points · ~5.8 MB gzipped</div>
+    </div>
+
+    <div class="umap-legend" id="dumap-legend"></div>
+
+    <div class="stat-row" id="dumap-stats">
+      <div class="stat-pair"><span class="stat-pair-label">points</span><span class="stat-pair-val muted" id="dumap-n">·</span></div>
+      <div class="stat-pair"><span class="stat-pair-label">species</span><span class="stat-pair-val muted" id="dumap-nsp">·</span></div>
+      <div class="stat-pair"><span class="stat-pair-label">embedding dim</span><span class="stat-pair-val muted">3072</span></div>
+      <div class="stat-pair"><span class="stat-pair-label">render</span><span class="stat-pair-val muted" id="dumap-fps">·</span></div>
+      <div class="umap-nav-hint">drag to pan · wheel to zoom · hover for details</div>
+    </div>
+  </div>
+
+  <div class="takeaway">
+    <strong>What to look for</strong>
+    Switch coloring from <em>species</em> to <em>biotype</em>: same points, completely
+    different organization emerges. The macro-clusters trace six kingdoms (vertebrates,
+    invertebrates, plants, fungi, bacteria, viruses), discovered from raw sequence alone.
+    Switch again to <em>gc content</em> and a perpendicular axis appears: AT-rich (cool
+    blue) vs GC-rich (warm amber) regions cut across the species clusters, revealing the
+    composition gradient the model has internalised. <em>Points: 571,810 real Carbon 3B
+    embeddings, projected to 2D via UMAP.</em>
+  </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- §7 · SPECIES TREE (Carbon-derived phylogeny)                  -->
+<!-- ============================================================ -->
+<section id="speciesTree" class="section--two-col">
+  <div class="section-narrative">
+  <div class="section-num">§7 · Species tree</div>
+  <div class="section-title">How Carbon groups species from DNA</div>
+  <p class="lede">
+    If we take 571,789 of the sequences from §6 (excluding the two viruses, which are not
+    part of the tree of life) and average each species' embeddings into a single 3072-dim
+    vector, then cluster those 25 centroids with hierarchical clustering,
+    we can find species the model regards as closely related. This dendrogram is not
+    intended as a phylogenetic tree, instead, it asks a simpler question: whether a model
+    trained only on DNA sequences learns representations whose geometry reflects broad
+    biological structure. Carbon was never trained on what the relation between organisms
+    is. Yet the resulting tree groups vertebrates together, separates bacteria from fungi,
+    and pairs sister clades (primates with primates, rodents with rodents, monocots with
+    monocots).
+  </p>
+  </div>
+
+  <div class="section-body">
+  <div class="demo" id="demoSpeciesTree">
+    <div class="tree-toolbar">
+      <span>linkage</span>
+      <span id="dtree-link-pills" class="pills">
+        <button class="pill active" data-link="ward">ward</button>
+        <button class="pill" data-link="upgma">upgma</button>
+      </span>
+      <span style="margin-left: 14px;">vs ncbi</span>
+      <span id="dtree-scope-pills" class="pills">
+        <button class="pill active" data-scope="kingdom">kingdom-level</button>
+        <button class="pill" data-scope="sister">sister-level</button>
+      </span>
+      <span class="spacer"></span>
+      <div class="tree-score">
+        <div class="tree-score-headline">
+          <span class="tree-score-pct" id="dtree-score-pct">·</span>
+          <span class="tree-score-ratio" id="dtree-score">·</span>
+        </div>
+        <div class="tree-score-label" id="dtree-score-suffix">match · ncbi kingdom</div>
+      </div>
+    </div>
+
+    <div class="gene-info" id="dtree-info">hover a row to see its top neighbours · toggle linkage / scope above</div>
+
+    <div class="tree-frame">
+      <div class="tree-grid" id="dtree-grid">
+        <div class="tree-spine" id="dtree-spine">
+          <svg id="dtree-svg" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none"></svg>
+          <div class="axis-label">cosine distance ←</div>
+        </div>
+        <div class="tree-rows" id="dtree-rows"></div>
+      </div>
+      <div class="tree-tooltip" id="dtree-tooltip"></div>
+    </div>
+
+    <div class="tree-legend">
+      <span class="tree-legend-item"><span class="tree-legend-swatch" style="background:#1f1f1d"></span>vertebrates</span>
+      <span class="tree-legend-item"><span class="tree-legend-swatch" style="background:#7a6242"></span>invertebrates</span>
+      <span class="tree-legend-item"><span class="tree-legend-swatch" style="background:#317f3f"></span>plants</span>
+      <span class="tree-legend-item"><span class="tree-legend-swatch" style="background:#a9762f"></span>fungi</span>
+      <span class="tree-legend-item"><span class="tree-legend-swatch" style="background:#b00020"></span>bacteria</span>
+      <span style="flex:1;"></span>
+      <span class="tree-legend-item"><span class="tree-legend-glyph" style="color:#317f3f">✓</span>nearest carbon neighbour shares the ncbi group</span>
+      <span class="tree-legend-item"><span class="tree-legend-glyph" style="color:#b00020">✗</span>doesn't</span>
+      <span class="tree-legend-item"><span class="tree-legend-glyph" style="color:#c8c5b9">·</span>solo (no ncbi sibling in the dataset)</span>
+    </div>
+
+    <div class="stat-row" id="dtree-stats">
+      <div class="stat-pair"><span class="stat-pair-label">species</span><span class="stat-pair-val" id="dtree-n">·</span></div>
+      <div class="stat-pair"><span class="stat-pair-label">sequences</span><span class="stat-pair-val" id="dtree-nseq">·</span></div>
+      <div class="stat-pair"><span class="stat-pair-label">embedding dim</span><span class="stat-pair-val">3072</span></div>
+      <div class="stat-pair"><span class="stat-pair-label">distance</span><span class="stat-pair-val">cosine</span></div>
+    </div>
+  </div>
+
+  <div class="takeaway">
+    <strong>What to look for</strong>
+    Toggle <em>kingdom-level</em> vs <em>sister-level</em>: at the kingdom scale the
+    embedding is strong and stable: animals cluster with animals, bacteria with
+    bacteria. At the sister scale (primate-with-primate, etc.) it's lower as distances
+    are extremely small, so the nearest neighbor can change with sampling, pooling, or
+    linkage choice. The model nails the broad strokes but blurs the fine branches at
+    this resolution. Switch <em>linkage</em> from Ward to UPGMA to see how much of the
+    structure is method-independent. <em>Tree built from species centroids of mean-pooled
+    Carbon-3B embeddings.</em>
+  </div>
+  </div>
+</section>
+
+</div>
+
+</div> <!-- /panel-dna-lab -->
+
+<div class="tab-panel" id="panel-recipe" data-tab="recipe">
+
+<div class="tab-lede">
+  <div class="tab-lede__rail">
+    <span class="tab-lede__eyebrow">Intro</span>
+    <p>
+      Carbon's architecture is deliberately vanilla. What's <em>not</em> vanilla, and what
+      gets the headline numbers in the DNA Lab tab, is three things: a <strong>6-mer
+      tokenizer</strong> that lets the model see ~6&times; more genomic context per
+      forward pass, a <strong>Factorized Nucleotide Supervision (FNS)</strong> loss
+      that gives the model partial credit for near-miss tokens once cross-entropy
+      training starts to wobble, and a <strong>multi-stage curated data mixture</strong>,
+      biased toward functional genomic regions. Everything else (architecture, optimizer)
+      is standard recipe. The technical report details each choice and the ablations
+      behind it.
+    </p>
+    <p class="tab-lede__note">
+      The sections below walk through each of those choices: how the tokenizer changes
+      what a "token" means in DNA <a class="lede-chip" href="#tokenizer">§1</a>, how
+      FNS rescues training in the BF16 regime <a class="lede-chip" href="#loss">§2</a>,
+      how bp-level generation and scoring fall out of the same marginalization
+      <a class="lede-chip" href="#bpinference">§3</a>, what's in the training corpus
+      <a class="lede-chip" href="#data">§4</a>, what the architecture looks like
+      <a class="lede-chip" href="#architecture">§5</a>, how 8k-token pretraining reaches
+      786 kbp at inference <a class="lede-chip" href="#longcontext">§6</a>, how Carbon
+      stacks up against Evo2-7B and GENERator-v2 on the full training-free suite
+      <a class="lede-chip" href="#results">§7</a>, and why the model runs so fast
+      <a class="lede-chip" href="#efficiency">§8</a>.
+    </p>
+  </div>
+</div>
+
+<div class="container wide">
+
+<!-- ============================================================ -->
+<!-- §7 · TOKENIZER                                                -->
+<!-- ============================================================ -->
+<section id="tokenizer" class="section--two-col">
+  <div class="section-narrative">
+  <div class="section-num">§1 · Tokenizer</div>
+  <div class="section-title">Read DNA in 6-base chunks</div>
+  <p class="lede">
+    The most direct way to model DNA is one base per token. It works, but for a
+    <code>L</code>-base sequence Transformer attention costs <code>L²</code>, and DNA contexts
+    are long. Carbon instead reads in fixed 6-base blocks. Same DNA span, ⅙ the tokens, and
+    because attention is quadratic, up to <strong>36× cheaper</strong> at the same coverage.
+    BPE was a tempting middle ground, but its variable-length tokens collide badly with
+    autoregressive next-token prediction: DNA doesn't have stable "words."
+  </p>
+  </div>
+
+  <div class="section-body">
+  <div class="demo" id="demo7">
+    <div class="demo-toolbar">
+      <span>type DNA</span>
+      <input id="d7-input" type="text" spellcheck="false" autocapitalize="characters"
+             value="ATGGCCAAGCTGACCAGCGAGCTGCTGGCC"
+             style="font-family:'JetBrains Mono',monospace;font-size:12px;padding:6px 10px;border:1px solid #ccc;border-radius:3px;flex:1 1 auto;min-width:0;letter-spacing:1px;text-transform:uppercase">
+      <span class="status"><span class="dot" style="background:#317f3f"></span><span id="d7-len">30 bp</span></span>
+    </div>
+
+    <div id="d7-cols" style="display:grid;grid-template-columns:1fr;gap:16px;margin-top:8px">
+      <div>
+        <div class="seq-label" style="margin-top:0">1-mer  ·  one token per base</div>
+        <div class="seq-block" id="d7-1mer" style="min-height:60px"></div>
+      </div>
+      <div>
+        <div class="seq-label" style="margin-top:0">6-mer (carbon)  ·  one token per 6 bases</div>
+        <div class="seq-block" id="d7-6mer" style="min-height:60px"></div>
+      </div>
+    </div>
+
+    <!-- Stats for both tokenisers, grouped under the two sequences so the
+         eye can compare them in one glance. Labels are prefixed with
+         "1-mer" / "6-mer" since the row no longer sits directly below its
+         own sequence block. -->
+    <div class="stat-row" style="margin-top:14px;padding-top:12px">
+      <div class="stat-pair"><span class="stat-pair-label">1-mer tokens</span><span class="stat-pair-val" id="d7-1mer-tok">·</span></div>
+      <div class="stat-pair"><span class="stat-pair-label">1-mer attention</span><span class="stat-pair-val" id="d7-1mer-att">·</span></div>
+      <div class="stat-pair"><span class="stat-pair-label">1-mer vocab</span><span class="stat-pair-val">4</span></div>
+      <div class="stat-pair"><span class="stat-pair-label">6-mer tokens</span><span class="stat-pair-val" id="d7-6mer-tok">·</span></div>
+      <div class="stat-pair"><span class="stat-pair-label">6-mer attention</span><span class="stat-pair-val" id="d7-6mer-att">·</span></div>
+      <div class="stat-pair"><span class="stat-pair-label">6-mer vocab</span><span class="stat-pair-val">4,096</span></div>
+    </div>
+
+    <svg id="d7-bars" preserveAspectRatio="xMinYMin meet" style="display:block;width:100%;background:#fff;border:1px solid #eee;margin-top:14px"></svg>
+
+    <div class="track-axis-label" style="padding-top:10px">
+      <span>same DNA span</span>
+      <span style="color:#317f3f">▼ shorter token sequence = cheaper attention</span>
+      <span id="d7-speedup" style="color:#317f3f;font-weight:500">36× cheaper</span>
+    </div>
+  </div>
+
+  <div class="takeaway">
+    <strong>Why not BPE</strong>
+    BPE works for English because words have stable boundaries. DNA motifs don't:
+    the TATA box is a <em>family</em> of patterns (<code>TATATA</code>, <code>TATATT</code>, …),
+    not a single string. Worse, in autoregressive mode, BPE penalizes the model for predicting
+    a valid <em>prefix</em> of the target token. 6-mer is a deterministic, neutral compression
+    that avoids this trap.
+  </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- §8 · TRAINING OBJECTIVE (CE → FNS)                           -->
+<!-- ============================================================ -->
+<section id="loss" class="section--two-col">
+  <div class="section-narrative">
+  <div class="section-num">§2 · Training objective</div>
+  <div class="section-title">Partial credit for near-misses</div>
+  <p class="lede">
+    Cross-entropy treats every 6-mer token as atomic: predict <code>TATATT</code> when the
+    target was <code>TATATA</code>, get zero credit even though five of six bases matched.
+    That gets brittle late in training. Carbon switches to <strong>Factorized Nucleotide
+    Supervision</strong>: instead of one 4096-way classification, the model is supervised on
+    six parallel 4-way nucleotide marginals derived from the same logits. Near-miss tokens
+    get partial credit proportional to how many bases they got right.
+  </p>
+  </div>
+
+  <div class="section-body">
+  <div class="demo" id="demo8">
+    <div class="demo-toolbar">
+      <span>target 6-mer</span>
+      <span id="d8-target-pills" class="pills">
+        <button class="pill active" data-target="TATATA">TATATA</button>
+        <button class="pill" data-target="ATGGCC">ATGGCC</button>
+        <button class="pill" data-target="GCATCG">GCATCG</button>
+      </span>
+    </div>
+
+    <div id="d8-canvas" style="margin-top:12px"></div>
+  </div>
+
+  <div class="takeaway">
+    <strong>What the switch buys you</strong>
+    CE first: the model learns the joint structure of bases inside each 6-mer (codon
+    constraints, splice signals, motif composition). FNS later, when CE turns brittle
+    (the "loss staircase," and BF16 inference starts diverging from FP32), FNS smooths the
+    objective and restores numerical robustness without giving up the joint prior CE built.
+  </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- §8.5 · BP-LEVEL INFERENCE                                     -->
+<!-- ============================================================ -->
+<section id="bpinference" class="section--two-col">
+  <div class="section-narrative">
+  <div class="section-num">§3 · BP-level inference</div>
+  <div class="section-title">Bases, not 6-mers</div>
+  <p class="lede">
+    The 6-mer tokenizer makes Carbon fast, but it's coarse in both directions
+    of inference. When <em>generating</em>, each step advances the sequence by
+    6 bases at once and temperature acts on a 4,096-way distribution rather
+    than per nucleotide. When <em>scoring</em> an existing sequence, the raw
+    next-token likelihood answers "how likely is this 6-mer in context?", not
+    "how likely is this exact base at this exact position?", which is the
+    version you want for variant-effect prediction. The same marginalization
+    that powers FNS at training time fixes both: softmax over the 6-mer
+    logits, then for each position <code>p</code> sum the probabilities of
+    every 6-mer that shares a given base at <code>p</code>, and you recover
+    six per-position 4-way base distributions. To generate, sample (or argmax)
+    each independently and force the matching 6-mer token. To score, read
+    <em>P(actual base | context)</em> directly off the marginals at every
+    position. Same logits, same math, two endpoints.
+  </p>
+  </div>
+
+  <div class="section-body">
+  <div class="demo" id="demobp">
+    <div class="seq-label" style="margin-top:0">per-step pipeline · 4,096-way 6-mer logits → 6 × 4-way base marginals → reassembled token</div>
+
+    <div style="display:grid;gap:12px;padding:14px;background:#fff;border:1px solid #eee;font-family:'JetBrains Mono',monospace">
+
+      <div>
+        <div style="font-size:10px;color:#888;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">step 1 · softmax over 4,096 DNA tokens</div>
+        <svg viewBox="0 0 800 30" preserveAspectRatio="none" style="display:block;width:100%;height:30px;background:#fafaf6;border:1px solid #eee">
+          <rect x="0"   y="27" width="8" height="3"  fill="#c4c0b3"/>
+          <rect x="16"  y="26" width="8" height="4"  fill="#c4c0b3"/>
+          <rect x="32"  y="28" width="8" height="2"  fill="#c4c0b3"/>
+          <rect x="48"  y="25" width="8" height="5"  fill="#c4c0b3"/>
+          <rect x="64"  y="27" width="8" height="3"  fill="#c4c0b3"/>
+          <rect x="80"  y="26" width="8" height="4"  fill="#c4c0b3"/>
+          <rect x="96"  y="28" width="8" height="2"  fill="#c4c0b3"/>
+          <rect x="112" y="27" width="8" height="3"  fill="#c4c0b3"/>
+          <rect x="128" y="24" width="8" height="6"  fill="#c4c0b3"/>
+          <rect x="144" y="22" width="8" height="8"  fill="#c4c0b3"/>
+          <rect x="160" y="26" width="8" height="4"  fill="#c4c0b3"/>
+          <rect x="176" y="28" width="8" height="2"  fill="#c4c0b3"/>
+          <rect x="192" y="25" width="8" height="5"  fill="#c4c0b3"/>
+          <rect x="208" y="27" width="8" height="3"  fill="#c4c0b3"/>
+          <rect x="224" y="2"  width="8" height="28" fill="#1A7A40"/>
+          <rect x="240" y="20" width="8" height="10" fill="#c4c0b3"/>
+          <rect x="256" y="27" width="8" height="3"  fill="#c4c0b3"/>
+          <rect x="272" y="26" width="8" height="4"  fill="#c4c0b3"/>
+          <rect x="288" y="28" width="8" height="2"  fill="#c4c0b3"/>
+          <rect x="304" y="25" width="8" height="5"  fill="#c4c0b3"/>
+          <rect x="320" y="27" width="8" height="3"  fill="#c4c0b3"/>
+          <rect x="336" y="26" width="8" height="4"  fill="#c4c0b3"/>
+          <rect x="352" y="28" width="8" height="2"  fill="#c4c0b3"/>
+          <rect x="368" y="25" width="8" height="5"  fill="#c4c0b3"/>
+          <rect x="384" y="27" width="8" height="3"  fill="#c4c0b3"/>
+          <rect x="400" y="22" width="8" height="8"  fill="#c4c0b3"/>
+          <rect x="416" y="18" width="8" height="12" fill="#c4c0b3"/>
+          <rect x="432" y="26" width="8" height="4"  fill="#c4c0b3"/>
+          <rect x="448" y="28" width="8" height="2"  fill="#c4c0b3"/>
+          <rect x="464" y="25" width="8" height="5"  fill="#c4c0b3"/>
+          <rect x="480" y="27" width="8" height="3"  fill="#c4c0b3"/>
+          <rect x="496" y="14" width="8" height="16" fill="#c4c0b3"/>
+          <rect x="512" y="26" width="8" height="4"  fill="#c4c0b3"/>
+          <rect x="528" y="28" width="8" height="2"  fill="#c4c0b3"/>
+          <rect x="544" y="27" width="8" height="3"  fill="#c4c0b3"/>
+          <rect x="560" y="25" width="8" height="5"  fill="#c4c0b3"/>
+          <rect x="576" y="26" width="8" height="4"  fill="#c4c0b3"/>
+          <rect x="592" y="28" width="8" height="2"  fill="#c4c0b3"/>
+          <rect x="608" y="27" width="8" height="3"  fill="#c4c0b3"/>
+          <rect x="624" y="24" width="8" height="6"  fill="#c4c0b3"/>
+          <rect x="640" y="20" width="8" height="10" fill="#c4c0b3"/>
+          <rect x="656" y="26" width="8" height="4"  fill="#c4c0b3"/>
+          <rect x="672" y="28" width="8" height="2"  fill="#c4c0b3"/>
+          <rect x="688" y="25" width="8" height="5"  fill="#c4c0b3"/>
+          <rect x="704" y="27" width="8" height="3"  fill="#c4c0b3"/>
+          <rect x="720" y="26" width="8" height="4"  fill="#c4c0b3"/>
+          <rect x="736" y="22" width="8" height="8"  fill="#c4c0b3"/>
+          <rect x="752" y="28" width="8" height="2"  fill="#c4c0b3"/>
+          <rect x="768" y="25" width="8" height="5"  fill="#c4c0b3"/>
+          <rect x="784" y="27" width="8" height="3"  fill="#c4c0b3"/>
+        </svg>
+      </div>
+
+      <div style="text-align:center;color:#888;font-size:11px">▼ &nbsp; sum over 6-mers sharing a base at position <em>p</em></div>
+
+      <div>
+        <div style="font-size:10px;color:#888;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">step 2 · six 4-way per-base distributions</div>
+        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px">
+          <!-- pos 1 · A dominant -->
+          <div style="background:#fafaf6;border:1px solid #eee;border-radius:2px;padding:6px 4px">
+            <div style="font-size:10px;color:#888;text-align:center;margin-bottom:4px">pos 1</div>
+            <div style="display:flex;align-items:flex-end;justify-content:center;gap:3px;height:34px">
+              <div style="width:7px;height:30px;background:#1A7A40;border-radius:1px 1px 0 0"></div>
+              <div style="width:7px;height:5px; background:#c4c0b3;border-radius:1px 1px 0 0"></div>
+              <div style="width:7px;height:3px; background:#c4c0b3;border-radius:1px 1px 0 0"></div>
+              <div style="width:7px;height:3px; background:#c4c0b3;border-radius:1px 1px 0 0"></div>
+            </div>
+            <div style="display:flex;justify-content:center;gap:3px;margin-top:3px;font-size:9px;color:#888">
+              <span style="width:7px;text-align:center;color:#1A7A40;font-weight:700">A</span><span style="width:7px;text-align:center">T</span><span style="width:7px;text-align:center">C</span><span style="width:7px;text-align:center">G</span>
+            </div>
+          </div>
+          <!-- pos 2 · C dominant -->
+          <div style="background:#fafaf6;border:1px solid #eee;border-radius:2px;padding:6px 4px">
+            <div style="font-size:10px;color:#888;text-align:center;margin-bottom:4px">pos 2</div>
+            <div style="display:flex;align-items:flex-end;justify-content:center;gap:3px;height:34px">
+              <div style="width:7px;height:4px; background:#c4c0b3;border-radius:1px 1px 0 0"></div>
+              <div style="width:7px;height:4px; background:#c4c0b3;border-radius:1px 1px 0 0"></div>
+              <div style="width:7px;height:28px;background:#1A7A40;border-radius:1px 1px 0 0"></div>
+              <div style="width:7px;height:4px; background:#c4c0b3;border-radius:1px 1px 0 0"></div>
+            </div>
+            <div style="display:flex;justify-content:center;gap:3px;margin-top:3px;font-size:9px;color:#888">
+              <span style="width:7px;text-align:center">A</span><span style="width:7px;text-align:center">T</span><span style="width:7px;text-align:center;color:#1A7A40;font-weight:700">C</span><span style="width:7px;text-align:center">G</span>
+            </div>
+          </div>
+          <!-- pos 3 · G dominant -->
+          <div style="background:#fafaf6;border:1px solid #eee;border-radius:2px;padding:6px 4px">
+            <div style="font-size:10px;color:#888;text-align:center;margin-bottom:4px">pos 3</div>
+            <div style="display:flex;align-items:flex-end;justify-content:center;gap:3px;height:34px">
+              <div style="width:7px;height:3px; background:#c4c0b3;border-radius:1px 1px 0 0"></div>
+              <div style="width:7px;height:3px; background:#c4c0b3;border-radius:1px 1px 0 0"></div>
+              <div style="width:7px;height:4px; background:#c4c0b3;border-radius:1px 1px 0 0"></div>
+              <div style="width:7px;height:28px;background:#1A7A40;border-radius:1px 1px 0 0"></div>
+            </div>
+            <div style="display:flex;justify-content:center;gap:3px;margin-top:3px;font-size:9px;color:#888">
+              <span style="width:7px;text-align:center">A</span><span style="width:7px;text-align:center">T</span><span style="width:7px;text-align:center">C</span><span style="width:7px;text-align:center;color:#1A7A40;font-weight:700">G</span>
+            </div>
+          </div>
+          <!-- pos 4 · T dominant -->
+          <div style="background:#fafaf6;border:1px solid #eee;border-radius:2px;padding:6px 4px">
+            <div style="font-size:10px;color:#888;text-align:center;margin-bottom:4px">pos 4</div>
+            <div style="display:flex;align-items:flex-end;justify-content:center;gap:3px;height:34px">
+              <div style="width:7px;height:4px; background:#c4c0b3;border-radius:1px 1px 0 0"></div>
+              <div style="width:7px;height:28px;background:#1A7A40;border-radius:1px 1px 0 0"></div>
+              <div style="width:7px;height:4px; background:#c4c0b3;border-radius:1px 1px 0 0"></div>
+              <div style="width:7px;height:4px; background:#c4c0b3;border-radius:1px 1px 0 0"></div>
+            </div>
+            <div style="display:flex;justify-content:center;gap:3px;margin-top:3px;font-size:9px;color:#888">
+              <span style="width:7px;text-align:center">A</span><span style="width:7px;text-align:center;color:#1A7A40;font-weight:700">T</span><span style="width:7px;text-align:center">C</span><span style="width:7px;text-align:center">G</span>
+            </div>
+          </div>
+          <!-- pos 5 · A slight lead (less peaked) -->
+          <div style="background:#fafaf6;border:1px solid #eee;border-radius:2px;padding:6px 4px">
+            <div style="font-size:10px;color:#888;text-align:center;margin-bottom:4px">pos 5</div>
+            <div style="display:flex;align-items:flex-end;justify-content:center;gap:3px;height:34px">
+              <div style="width:7px;height:20px;background:#1A7A40;border-radius:1px 1px 0 0"></div>
+              <div style="width:7px;height:14px;background:#c4c0b3;border-radius:1px 1px 0 0"></div>
+              <div style="width:7px;height:4px; background:#c4c0b3;border-radius:1px 1px 0 0"></div>
+              <div style="width:7px;height:4px; background:#c4c0b3;border-radius:1px 1px 0 0"></div>
+            </div>
+            <div style="display:flex;justify-content:center;gap:3px;margin-top:3px;font-size:9px;color:#888">
+              <span style="width:7px;text-align:center;color:#1A7A40;font-weight:700">A</span><span style="width:7px;text-align:center">T</span><span style="width:7px;text-align:center">C</span><span style="width:7px;text-align:center">G</span>
+            </div>
+          </div>
+          <!-- pos 6 · T dominant -->
+          <div style="background:#fafaf6;border:1px solid #eee;border-radius:2px;padding:6px 4px">
+            <div style="font-size:10px;color:#888;text-align:center;margin-bottom:4px">pos 6</div>
+            <div style="display:flex;align-items:flex-end;justify-content:center;gap:3px;height:34px">
+              <div style="width:7px;height:4px; background:#c4c0b3;border-radius:1px 1px 0 0"></div>
+              <div style="width:7px;height:26px;background:#1A7A40;border-radius:1px 1px 0 0"></div>
+              <div style="width:7px;height:4px; background:#c4c0b3;border-radius:1px 1px 0 0"></div>
+              <div style="width:7px;height:8px; background:#c4c0b3;border-radius:1px 1px 0 0"></div>
+            </div>
+            <div style="display:flex;justify-content:center;gap:3px;margin-top:3px;font-size:9px;color:#888">
+              <span style="width:7px;text-align:center">A</span><span style="width:7px;text-align:center;color:#1A7A40;font-weight:700">T</span><span style="width:7px;text-align:center">C</span><span style="width:7px;text-align:center">G</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="text-align:center;color:#888;font-size:11px">▼ &nbsp; same marginals feed two endpoints: generate (force a token) or score (read off P(base))</div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <!-- step 3a · generation endpoint -->
+        <div>
+          <div style="font-size:10px;color:#888;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">step 3a · generate</div>
+          <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:12px;background:#fafaf6;border:1px solid #eee;height:88px;box-sizing:border-box">
+            <div style="display:flex;gap:6px;font-size:18px;font-weight:700;color:#1A7A40;letter-spacing:2px">
+              <span>A</span><span>C</span><span>G</span><span>T</span><span>A</span><span>T</span>
+            </div>
+            <div style="font-size:10px;color:#666;text-align:center;line-height:1.4">
+              argmax / multinomial &rarr; force matching 6-mer token
+            </div>
+          </div>
+        </div>
+
+        <!-- step 3b · scoring endpoint -->
+        <div>
+          <div style="font-size:10px;color:#888;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px">step 3b · score</div>
+          <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:12px;background:#fafaf6;border:1px solid #eee;height:88px;box-sizing:border-box">
+            <div style="display:flex;gap:8px;font-size:11px;color:#1A7A40;font-weight:600;font-feature-settings:'tnum'">
+              <span>.83</span><span>.71</span><span>.92</span><span>.67</span><span>.48</span><span>.79</span>
+            </div>
+            <div style="font-size:10px;color:#666;text-align:center;line-height:1.4">
+              read P(actual base | context) at each position
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="takeaway">
+    <strong>When to switch on bp-level</strong>
+    Use plain 6-mer decoding when 6-base granularity is fine: throughput-bound
+    generation, long retrieval haystacks, large-scale screening. Reach for
+    bp-level <em>generation</em> when you need exact base counts, per-position
+    masks, or temperature applied at the base axis rather than the 4,096-way
+    6-mer axis. Reach for bp-level <em>scoring</em> whenever the task is about
+    a specific base: variant-effect prediction, single-nucleotide mutational
+    scans, comparing the likelihood of a reference and an alternate allele at
+    one position. Both paths ship together on the <code>fns</code> revision of
+    the <code>Carbon-3B</code>/<code>8B</code>/<code>500M</code> checkpoints:
+    plain <code>.generate()</code> already produces bp-resolution output (the
+    tokenizer exposes the kmer width as <code>tokenizer.k</code>), and the
+    model gains a <code>score_sequence(seqs)</code> method that batches a list
+    of sequences and returns per-base distributions plus the probability of
+    the observed base at every position.
+  </div>
+
+  <details class="code-snippet">
+    <summary>Run this from code</summary>
+    <div class="code-snippet__body">
+      <div class="code-snippet__tabs">
+        <button class="code-snippet__tab active" data-tab="generate" type="button">generate</button>
+        <button class="code-snippet__tab"        data-tab="score"    type="button">score</button>
+      </div>
+      <button class="code-snippet__copy" type="button">Copy</button>
+      <div class="code-snippet__panel active" data-tab="generate"><pre><code>import math
+import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
+model_id = "HuggingFaceBio/Carbon-3B"
+revision = "fns"
+device = "cuda"
+
+tokenizer = AutoTokenizer.from_pretrained(model_id, revision=revision, trust_remote_code=True)
+model = AutoModelForCausalLM.from_pretrained(
+    model_id,
+    revision=revision,
+    trust_remote_code=True,
+    dtype=torch.bfloat16,
+).to(device).eval()
+
+context = "ATGCGCTAGCTACGATCGATCGTAGCTAGCTAGCTAGCTACG"
+n_bp = 60
+
+inputs = tokenizer(f"&lt;dna&gt;{context}", return_tensors="pt", add_special_tokens=False).to(device)
+
+with torch.no_grad():
+    output_ids = model.generate(
+        **inputs,
+        max_new_tokens=math.ceil(n_bp / tokenizer.k),
+        do_sample=False,
+        pad_token_id=tokenizer.eos_token_id,
+    )
+
+generated_ids = output_ids[0, inputs.input_ids.shape[1]:]
+generated_dna = tokenizer.decode(generated_ids, skip_special_tokens=True)[:n_bp]
+
+print(generated_dna)</code></pre></div>
+      <div class="code-snippet__panel" data-tab="score"><pre><code>import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer
+
+model_id = "HuggingFaceBio/Carbon-3B"
+revision = "fns"
+device = "cuda"
+
+tokenizer = AutoTokenizer.from_pretrained(model_id, revision=revision, trust_remote_code=True)
+model = AutoModelForCausalLM.from_pretrained(
+    model_id,
+    revision=revision,
+    trust_remote_code=True,
+    dtype=torch.bfloat16,
+).to(device).eval()
+
+reference = "GGGCTATAAAGGCCATCGATCGATCGATCGATCGATCGATCG"
+perturbed = "GGGCGCGCGCGGCCATCGATCGATCGATCGATCGATCGATCG"
+
+# score_sequence accepts a list of sequences and returns, for each one,
+# the [seq_len, 4] marginal P(A/T/C/G | context) and the [seq_len]
+# probability of the observed base.
+with torch.no_grad():
+    bp_probs, actual_probs = model.score_sequence([reference, perturbed])
+
+scores = [torch.log(p.clamp_min(1e-12)).mean().item() for p in actual_probs]
+
+print(f"reference mean bp logp: {scores[0]:.4f}")
+print(f"perturbed mean bp logp: {scores[1]:.4f}")
+print(f"reference preferred: {scores[0] > scores[1]}")</code></pre></div>
+    </div>
+  </details>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- §9 · DATA                                                     -->
+<!-- ============================================================ -->
+<section id="data" class="section--two-col">
+  <div class="section-narrative">
+  <div class="section-num">§4 · Data</div>
+  <div class="section-title">Genomes are mostly background</div>
+  <p class="lede">
+    A naive read of "more data is better" misses something specific to DNA: most of a
+    eukaryotic genome is repeats, low-complexity, and weakly-constrained background.
+    Train on raw sequence and a lot of your loss is dominated by easy-to-predict noise.
+    Carbon's corpus is an annotation-aware mixture, biased toward gene-centric, transcript,
+    and bacterial sequence, so the model spends more of its gradient updates on biologically
+    meaningful sequence.
+  </p>
+  </div>
+
+  <div class="section-body">
+  <div class="demo" id="demo9">
+    <div class="seq-label" style="margin-top:0">corpus composition · 1T tokens (6T base pairs)</div>
+    <div id="d9-bars" class="d9-bars" style="margin-bottom:22px"></div>
+
+    <div class="seq-label">signal-to-noise · raw genome vs annotation-aware curation</div>
+    <svg id="d9-snr" viewBox="0 0 1000 100" preserveAspectRatio="none" style="display:block;width:100%;height:90px;background:#fff;border:1px solid #eee"></svg>
+    <div class="track-axis-label" style="padding-top:10px">
+      <span><span class="legend-swatch" style="background:#317f3f"></span>functional / annotated</span>
+      <span><span class="legend-swatch" style="background:#ddd"></span>background</span>
+      <span style="color:#888">curating raises the density of biological signal in the gradient</span>
+    </div>
+
+    <div class="seq-label" style="margin-top:18px">metadata templates · the model sees mixed contexts so it works with or without labels</div>
+    <div id="d9-templates" style="display:grid;grid-template-columns:80px 1fr;gap:6px 14px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#333"></div>
+  </div>
+
+  <div class="takeaway">
+    <strong>The signal-to-noise math</strong>
+    If only 5% of a raw corpus is informative, but you keep 80% of informative regions while
+    discarding 95% of background, the effective informative fraction jumps from 5% to ≈ 46%.
+    Same training compute, ~9× more learning signal per gradient step.
+  </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- §10 · ARCHITECTURE                                            -->
+<!-- ============================================================ -->
+<section id="architecture" class="section--two-col">
+  <div class="section-narrative">
+  <div class="section-num">§5 · Architecture</div>
+  <div class="section-title">A deliberately vanilla transformer</div>
+  <p class="lede">
+    Decoder-only, RMSNorm + SwiGLU + RoPE + grouped-query attention, tied I/O embeddings,
+    8k-token context. Nothing exotic. The architectural surface is intentionally familiar so
+    that any improvement Carbon shows on genomic tasks is attributable to the data, the
+    tokenizer, and the loss, not to a custom block or a hand-crafted attention variant.
+  </p>
+  </div>
+
+  <div class="section-body">
+  <div class="demo" id="demo10">
+    <table id="d10-arch" style="width:100%;border-collapse:collapse;font-family:'JetBrains Mono',monospace;font-size:12px"></table>
+    <div style="margin-top:14px;font-size:11px;color:#666;font-family:'JetBrains Mono',monospace">
+      vocabulary = 4,096 6-mer DNA tokens + small set of special / metadata tokens · total 155,776
+    </div>
+  </div>
+
+  <div class="takeaway">
+    <strong>Why this matters</strong>
+    Architecture innovation is one of the cheapest things to claim and one of the hardest things
+    to attribute. Carbon's results (competitive with Evo2-7B at 3B parameters, ahead of it on a
+    majority of tasks at 8B) come from changes that <em>aren't</em> the architecture. That's where
+    the room for genomic foundation models still is.
+  </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- §11 · LONG CONTEXT (training-time extension + YaRN)           -->
+<!-- ============================================================ -->
+<section id="longcontext" class="section--two-col">
+  <div class="section-narrative">
+  <div class="section-num">§6 · Long context</div>
+  <div class="section-title">Pretrain at 8k, retrieve at 786 kbp</div>
+  <p class="lede">
+    Carbon's nominal training context is short by megabase-scale standards (8k tokens, ≈49&nbsp;kbp).
+    The reach comes from a two-step extension. First, a <strong>training-time</strong> long-context
+    phase lifts the context to 32k tokens (≈197&nbsp;kbp) with RoPE θ rescaled from 500k to 5M.
+    Then, at <strong>inference</strong>, YaRN pushes that further: 2× to 65k tokens for the 3B
+    model, 4× to 131k tokens for the 8B (≈786&nbsp;kbp, the size of a small bacterial genome).
+    The 8B has more capacity to absorb the YaRN stretch, which is why it extends further than the 3B.
+  </p>
+  </div>
+
+  <div class="section-body">
+  <div class="demo" id="demo11">
+    <div class="seq-label" style="margin-top:0">context length · log scale, base pairs of DNA reachable in a single forward pass</div>
+    <svg id="d11-ladder" preserveAspectRatio="xMinYMin meet" style="display:block;width:100%;background:#fff;border:1px solid #eee"></svg>
+
+    <div class="seq-label" style="margin-top:18px">Genome-NIAH retrieval · plain variant · find a planted 24 bp value inside a real-genome haystack</div>
+    <svg id="d11-niah" preserveAspectRatio="xMinYMin meet" style="display:block;width:100%;background:#fff;border:1px solid #eee"></svg>
+    <div class="track-axis-label" style="padding-top:10px">
+      <span><span class="legend-swatch" style="background:#1A7A40"></span>Carbon 8B (YaRN)</span>
+      <span><span class="legend-swatch" style="background:#6DBF7E"></span>Carbon 3B (YaRN)</span>
+      <span><span class="legend-swatch" style="background:#8C7355"></span>Evo2-7B (native 1M)</span>
+      <span style="color:#888">accuracy at exact-match retrieval, 500 samples per cell</span>
+    </div>
+  </div>
+
+  <div class="takeaway">
+    <strong>The headline number</strong>
+    At 786&nbsp;kbp, Carbon-8B retrieves the planted needle at <em>65%</em> accuracy. Evo2-7B,
+    natively trained at 1M tokens of single-nucleotide context (≈8× more wall-clock per token),
+    scores <em>53%</em> at the same length. So a 6-mer model trained to 32k tokens
+    plus YaRN-4× at inference reaches further than a 1M-native single-nucleotide model, which
+    is the entire bet of the Carbon recipe: nominal context length is not the same as effective
+    context utilization.
+  </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- §12 · RESULTS (per-task barplot vs Evo2-7B + GENERator-v2)    -->
+<!-- ============================================================ -->
+<section id="results" class="section--two-col">
+  <div class="section-narrative">
+  <div class="section-num">§7 · Results</div>
+  <div class="section-title">Training-free, head-to-head</div>
+  <p class="lede">
+    Eight training-free tasks across four capability axes: generative sequence recovery,
+    variant-effect prediction (BRCA2, TraitGym, ClinVar coding / non-coding), sequence-level
+    perturbation (synthetic motif insertion and synonymous codon shuffling), and long-context
+    retrieval (Genome-NIAH at 393&nbsp;kbp). No fine-tuning, no head training, all four frozen
+    pretrained models scored under the same protocol. Carbon-3B is competitive with Evo2-7B
+    despite less than half the parameters; Carbon-8B is ahead on five of eight.
+  </p>
+  </div>
+
+  <div class="section-body">
+  <div class="demo" id="demo12">
+    <div id="d12-bars"></div>
+    <div class="track-axis-label chart-legend">
+      <span class="chart-legend__item"><span class="legend-swatch" style="background:#1A7A40"></span>Carbon 8B</span>
+      <span class="chart-legend__item"><span class="legend-swatch" style="background:#6DBF7E"></span>Carbon 3B</span>
+      <span class="chart-legend__item"><span class="legend-swatch" style="background:#5A5A56"></span>Evo2-7B</span>
+      <span class="chart-legend__item"><span class="legend-swatch" style="background:#B5B0A6"></span>GENERator-v2 3B</span>
+    </div>
+  </div>
+
+  <div class="takeaway">
+    <strong>How to read it</strong>
+    Carbon-8B leads on sequence recovery, BRCA2, ClinVar non-coding, triplet expansion, and
+    Genome-NIAH at 393 kbp. Evo2-7B holds onto TraitGym Mendelian (a hard non-coding variant set),
+    and edges Carbon-8B on ClinVar coding and synonymous codon shuffling by a fraction of a point
+    each &mdash; small enough to be effectively a tie. The pattern is broad rather than peaky:
+    Carbon's gains come from data, tokenizer, and objective design, distributed across tasks,
+    not from a single specialised benchmark.
+  </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- §13 · EFFICIENCY (placeholder · figure pending)               -->
+<!-- ============================================================ -->
+<section id="efficiency" class="section--two-col">
+  <div class="section-narrative">
+  <div class="section-num">§8 · Efficiency</div>
+  <div class="section-title">Why Carbon is fast</div>
+  <p class="lede">
+    The throughput story is a two-factor multiplication, not one big trick. First, the
+    architecture is deliberately vanilla: a stock Llama-3-shaped decoder. That means
+    Carbon drops straight into <strong>vLLM</strong> and inherits the same paged-attention,
+    fused kernels, and CUDA-graph capture that the open-source LLM stack has been
+    optimizing for two years. Custom blocks would forfeit all of that. Second, 6-mer
+    tokenization compresses a given DNA span by <strong>6×</strong> at the input, which under
+    quadratic attention is up to a 36× reduction in prefill cost, and the decode loop
+    emits 6 bases per step instead of one. Stacking the two: standard-stack inference
+    speedups, multiplied by tokenizer compression, gets you the order-of-magnitude gap
+    over Evo2 reported in the paper.
+  </p>
+  </div>
+
+  <div class="section-body">
+  <div class="demo" id="demo13">
+    <div class="seq-label" style="margin-top:0">Inference throughput · output bp/s · single H100</div>
+    <svg id="d13-throughput" preserveAspectRatio="xMinYMin meet" style="display:block;width:100%;background:#fff;border:1px solid #eee"></svg>
+    <!-- Bigger sentence-case legend (.chart-legend variant from sequence.css)
+         to make the 7-model key feel like a proper colour reference rather
+         than a caption strip. The "Legend" prefix uses the same mono-uppercase
+         editorial-label register as .seq-label / .sb-examples-label so it
+         reads as a section gutter rather than as another item in the row. -->
+    <div class="track-axis-label chart-legend" style="justify-content:flex-start">
+      <span style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#888;text-transform:uppercase;letter-spacing:1.5px;font-weight:500">Legend</span>
+      <span class="chart-legend__item"><span class="legend-swatch" style="background:#1A7A40"></span>Carbon-8B</span>
+      <span class="chart-legend__item"><span class="legend-swatch" style="background:#6DBF7E"></span>Carbon-3B</span>
+      <span class="chart-legend__item"><span class="legend-swatch" style="background:#A8DCB4"></span>Carbon-500M</span>
+      <span class="chart-legend__item"><span class="legend-swatch" style="background:#C9A06A"></span>Evo2 1B</span>
+      <span class="chart-legend__item"><span class="legend-swatch" style="background:#8C7355"></span>Evo2 7B</span>
+      <span class="chart-legend__item"><span class="legend-swatch" style="background:#5A4A38"></span>Evo2 20B</span>
+      <span class="chart-legend__item"><span class="legend-swatch" style="background:#2A211A"></span>Evo2 40B</span>
+    </div>
+    <div style="margin-top:14px;padding-top:10px;border-top:1px solid #eee;font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#888;display:flex;justify-content:space-between;flex-wrap:wrap;gap:14px">
+      <span>Source · <a href="https://huggingface.co/datasets/HuggingFaceBio/carbon-inference-evals" style="color:#1f1f1d;text-decoration:underline">carbon-inference-evals</a></span>
+      <span style="color:#aaa">vLLM for Carbon · Evo2 native runner</span>
+    </div>
+  </div>
+
+  <div class="takeaway">
+    <strong>The compound effect</strong>
+    Neither factor on its own would be a story. Vanilla architecture without 6-mer compression
+    would land Carbon at roughly Llama-3 throughput: fine but not remarkable. 6-mer compression
+    on a custom architecture would force a hand-rolled inference stack to keep up with vLLM.
+    Doing both together is what makes a 3B-parameter DNA model usable for large-scale evaluation
+    on commodity hardware.
+  </div>
+  </div>
+</section>
+
+</div>
+
+</div> <!-- /panel-recipe -->
+
+<!-- ============================================================ -->
+<!-- TAB 3 · SANDBOX (the open-ended playground)                  -->
+<!-- ============================================================ -->
+<div class="tab-panel" id="panel-sandbox" data-tab="sandbox">
+
+<div class="tab-lede">
+  <div class="tab-lede__rail">
+    <span class="tab-lede__eyebrow">Intro</span>
+    <p>Open-ended DNA continuation. Type any prefix in {A, C, G, T}, watch the model continue token by token. Toggle base-coloring or per-token logprob coloring to see where Carbon is confident and where it's guessing. Track GC content, perplexity, and throughput live.</p>
+  </div>
+</div>
+
+<div class="container" style="max-width:1200px">
+
+<aside class="sb-safety" role="note" aria-label="Data safety">
+  <span class="sb-safety__icon" aria-hidden="true">⚠</span>
+  <div class="sb-safety__body">
+    <strong>Genetic data is highly sensitive.</strong>
+    Depending on how this model is used (local download, inference API/endpoints, third-party inference providers, Spaces demos or others), input and output data may be processed or handled differently by different providers or space owners. Please make sure you understand and agree with how your data is handled before using the model.
+  </div>
+</aside>
+
+<!-- Connection strip: tells you which model the playground is talking to.
+     Same eyebrow + value pattern reused by the two card headers below so
+     the whole panel reads as a single layered stack rather than a flat
+     wall of controls. -->
+<!-- INPUT card: examples → prompt → controls → status. -->
+<section class="sb-card">
+  <header class="sb-card__header sb-card__header--with-meta">
+    <div class="sb-card__heading">
+      <span class="sb-card__eyebrow">§ Input</span>
+      <h2 class="sb-card__title">Prompt</h2>
+      <p class="sb-card__hint">DNA prefix in <code>{A, C, G, T}</code>: pick an example or type your own.</p>
+    </div>
+    <div class="sb-card__meta">
+      <span class="sb-card__eyebrow">Connected to</span>
+      <div id="sb-meta" class="sb-header__meta">loading…</div>
+    </div>
+  </header>
+
+  <div class="sb-card__body">
+    <div class="sb-examples">
+      <span class="sb-examples-label">examples</span>
+      <button class="sb-ex-btn" data-ex="">empty<span class="sb-ex-label">unconditional</span></button>
+      <button class="sb-ex-btn" data-ex="ATG">ATG<span class="sb-ex-label">start codon</span></button>
+      <button class="sb-ex-btn" data-ex="TATAAA">TATAAA<span class="sb-ex-label">TATA box</span></button>
+      <button class="sb-ex-btn" data-ex="CGCGCGCGCG">CGCG…<span class="sb-ex-label">CpG island</span></button>
+      <button class="sb-ex-btn" data-ex="ATGGCCAAGCTGACCAGCGAGCTGCTG">ATGGCC…<span class="sb-ex-label">ORF start</span></button>
+      <button class="sb-ex-btn" data-ex="AAAAAAAAAAAAAAAA">A·16<span class="sb-ex-label">poly-A</span></button>
+    </div>
+
+    <textarea id="sb-prompt" class="sb-prompt-area" rows="3" spellcheck="false" autocapitalize="characters">AGT</textarea>
+
+    <!-- Controls split into two visual halves: sampling/display params on
+         the left, action buttons pinned to the right. The vertical rule
+         between them makes the parameter cluster read as one group. -->
+    <div class="sb-controls">
+      <div class="sb-controls__params">
+        <label class="sb-control">max tokens
+          <input type="number" id="sb-max-tokens" value="128" min="1" max="2048" step="1">
+        </label>
+        <label class="sb-control">temperature
+          <input type="number" id="sb-temperature" value="1.0" min="0" max="2" step="0.1">
+        </label>
+        <label class="sb-control">top-p
+          <input type="number" id="sb-top-p" value="1.0" min="0" max="1" step="0.05">
+        </label>
+
+        <div class="sb-mode-group">color
+          <div class="sb-mode-btns" id="sb-mode-btns">
+            <button class="sb-mode-btn active" data-mode="none">none</button>
+            <button class="sb-mode-btn" data-mode="bases">bases</button>
+            <button class="sb-mode-btn" data-mode="logprob">logprob</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="sb-controls__actions">
+        <button id="sb-clear-btn" class="action">clear</button>
+        <button id="sb-stop-btn" class="action" disabled>stop</button>
+        <button id="sb-generate-btn" class="action primary">▶ generate</button>
+      </div>
+    </div>
+
+    <!-- Hidden by setStatus("idle") so the toolbar stays clean until
+         something actually happens (connecting / streaming / done). -->
+    <div class="sb-status is-hidden" id="sb-status"><span class="dot"></span><span id="sb-status-text">idle</span></div>
+  </div>
+</section>
+
+<!-- OUTPUT card: streamed sequence + sticky stats sidebar. -->
+<section class="sb-card">
+  <header class="sb-card__header">
+    <span class="sb-card__eyebrow">§ Output</span>
+    <h2 class="sb-card__title">Sequence</h2>
+    <p class="sb-card__hint">Streams as the model generates · live stats on the right.</p>
+  </header>
+
+  <div class="sb-card__body">
+    <div class="sb-output-row">
+      <div class="sb-seq-wrap">
+        <button id="sb-copy-btn" class="sb-copy-btn" disabled>copy</button>
+        <div class="sb-seq-block empty" id="sb-seq">prompt + generated bases will stream here</div>
+      </div>
+
+      <div>
+        <div class="sb-stats" id="sb-stats">
+          <div class="sb-stat"><span class="sb-stat-label">prompt</span><span class="sb-stat-value" id="sb-stat-prompt">0<span class="sb-unit">bp</span></span></div>
+          <div class="sb-stat"><span class="sb-stat-label">generated</span><span class="sb-stat-value" id="sb-stat-gen">0<span class="sb-unit">bp</span></span></div>
+          <div class="sb-stat"><span class="sb-stat-label">tokens</span><span class="sb-stat-value" id="sb-stat-tok">0</span></div>
+          <div class="sb-stat"><span class="sb-stat-label">elapsed</span><span class="sb-stat-value" id="sb-stat-time">0.0<span class="sb-unit">s</span></span></div>
+          <div class="sb-stat"><span class="sb-stat-label">throughput</span><span class="sb-stat-value" id="sb-stat-rate">0<span class="sb-unit">bp/s</span></span></div>
+          <div class="sb-stat"><span class="sb-stat-label">GC content</span><span class="sb-stat-value" id="sb-stat-gc">·</span></div>
+          <div class="sb-stat"><span class="sb-stat-label">mean logprob</span><span class="sb-stat-value" id="sb-stat-lp">·</span></div>
+          <div class="sb-stat"><span class="sb-stat-label">perplexity</span><span class="sb-stat-value" id="sb-stat-ppl">·</span></div>
+        </div>
+        <div class="sb-legend" id="sb-legend">
+          <div>token logprob</div>
+          <div class="sb-legend-bar" id="sb-legend-bar"></div>
+          <div class="sb-legend-row"><span id="sb-lp-min">·</span><span id="sb-lp-mid">·</span><span id="sb-lp-max">·</span></div>
+          <svg id="sb-lp-chart" class="sb-lp-chart" preserveAspectRatio="none"></svg>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</div>
+</div> <!-- /panel-sandbox -->
+
+<!-- ============================================================ -->
+<!-- SITE FOOTER · always visible across tabs.                    -->
+<!-- Composition: collaboration block (eyebrow + headline + lede  -->
+<!-- + 4 partner stamps), then a three-column strip (Carbon       -->
+<!-- identity / Resources / Sections), then a thin legal hairline -->
+<!-- with copyright + license + model spec recap.                 -->
+<!-- ============================================================ -->
+<footer class="site-footer" role="contentinfo">
+  <div class="site-footer__inner">
+
+    <!-- 1) Collaboration block -->
+    <section class="cb-collab" aria-labelledby="cb-collab-title">
+      <div class="cb-collab__head">
+        <span class="cb-collab__eyebrow">§ Collaboration</span>
+        <h2 id="cb-collab-title" class="cb-collab__title">A joint research effort</h2>
+        <p class="cb-collab__lede">
+          Carbon was built together by the research teams at
+          <em>Hugging Face</em>, the <em>Zhongguancun Academy</em>,
+          <em>TIGEM</em> and the <em>Università di Napoli Federico II</em>.
+        </p>
+      </div>
+
+      <!-- Each <img> uses an aspect-correct width/height pair (height fixed
+           at 56, width derived from each logo's natural ratio) to prevent
+           CLS while the CSS lets the mark display at its full landscape
+           ratio. The .cb-partner__name span is hidden visually because
+           each real logo already carries its own wordmark; it stays in
+           the DOM as an accessible label for screen readers. -->
+      <ul class="cb-partners">
+        <li class="cb-partner">
+          <a class="cb-partner__link" href="https://huggingface.co" target="_blank" rel="noopener">
+            <span class="cb-partner__mark"><img src="/img/partners/hugging-face.svg" alt="Hugging Face" width="211" height="56"></span>
+            <span class="cb-partner__body">
+              <span class="cb-partner__name">Hugging Face</span>
+              <span class="cb-partner__sub">open-source AI</span>
+            </span>
+          </a>
+        </li>
+        <li class="cb-partner">
+          <a class="cb-partner__link" href="https://www.bza.edu.cn/en/" target="_blank" rel="noopener">
+            <span class="cb-partner__mark"><img src="/img/partners/zhongguancun.png" alt="Zhongguancun Academy" width="217" height="56"></span>
+            <span class="cb-partner__body">
+              <span class="cb-partner__name">Zhongguancun Academy</span>
+              <span class="cb-partner__sub">Beijing · China</span>
+            </span>
+          </a>
+        </li>
+        <li class="cb-partner">
+          <a class="cb-partner__link" href="https://www.tigem.it/" target="_blank" rel="noopener">
+            <span class="cb-partner__mark"><img src="/img/partners/tigem.svg" alt="TIGEM, Telethon Institute of Genetics and Medicine" width="80" height="56"></span>
+            <span class="cb-partner__body">
+              <span class="cb-partner__name">TIGEM</span>
+              <span class="cb-partner__sub">genetics &amp; medicine</span>
+            </span>
+          </a>
+        </li>
+        <li class="cb-partner">
+          <a class="cb-partner__link" href="https://www.unina.it/" target="_blank" rel="noopener">
+            <span class="cb-partner__mark"><img src="/img/partners/federico-ii.svg" alt="Università degli Studi di Napoli Federico II" width="56" height="56"></span>
+            <span class="cb-partner__body">
+              <span class="cb-partner__name">Federico II</span>
+              <span class="cb-partner__sub">Napoli · Italy</span>
+            </span>
+          </a>
+        </li>
+      </ul>
+    </section>
+
+    <!-- 2) Identity + link columns -->
+    <div class="site-footer__cols">
+      <div class="site-footer__brand">
+        <a class="logo-card" href="#" aria-label="Carbon, go to top">
+          <img class="logo-img" src="/img/logo.svg" alt="" width="44" height="44">
+        </a>
+        <div class="site-footer__brand-meta">
+          <div class="site-footer__brand-name">CARBON</div>
+          <div class="site-footer__brand-path">huggingfacebio/carbon-3b</div>
+          <p class="site-footer__brand-lede">
+            An autoregressive genomic foundation model — open code, open weights, open data.
+          </p>
+        </div>
+      </div>
+
+      <div class="site-footer__col">
+        <h3 class="site-footer__col-title">Resources</h3>
+        <ul class="site-footer__list">
+          <li><a href="https://huggingface.co/HuggingFaceBio/Carbon-3B" target="_blank" rel="noopener">Model card<span class="arrow" aria-hidden="true">↗</span></a></li>
+          <li><a href="#" target="_blank" rel="noopener">Tech report<span class="arrow" aria-hidden="true">↗</span></a></li>
+          <li><a href="https://github.com/huggingface/carbon" target="_blank" rel="noopener">GitHub<span class="arrow" aria-hidden="true">↗</span></a></li>
+          <li><a href="https://huggingface.co/datasets/HuggingFaceBio/carbon-pretraining-corpus" target="_blank" rel="noopener">Dataset<span class="arrow" aria-hidden="true">↗</span></a></li>
+        </ul>
+      </div>
+
+      <div class="site-footer__col">
+        <h3 class="site-footer__col-title">Sections</h3>
+        <ul class="site-footer__list">
+          <li><a href="#intro">Intro</a></li>
+          <li><a href="#dna-lab">DNA Lab</a></li>
+          <li><a href="#recipe">Carbon Recipe</a></li>
+          <li><a href="#sandbox">Sandbox</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 3) Legal strip -->
+    <div class="site-footer__legal">
+      <span class="site-footer__copy">
+        © 2026 · Carbon <span class="dot">·</span>
+        <a href="https://www.apache.org/licenses/LICENSE-2.0" target="_blank" rel="noopener">Apache 2.0</a>
+      </span>
+      <span class="site-footer__spec">
+        393,216 bp context <span class="dot">·</span> 6-mer tokenizer <span class="dot">·</span> 1T train tokens
+      </span>
+    </div>
+
+  </div>
+</footer>
+
+<!-- Modular JS, served from /assets/js/. Load order matters because
+     section IIFEs reference shared globals (lerp, logprobRgb, GENES,
+     loadConfig, etc.) defined in shared/. Each file ends with its own
+     IIFE so order between sections is irrelevant, but shared/ must
+     load first. tabs.js runs loadConfig() at the bottom, so it sits
+     last. -->
+<script src="/assets/js/shared/helpers.js"></script>
+<script src="/assets/js/shared/config.js"></script>
+<script src="/assets/js/shared/code-snippet.js"></script>
+<script src="/assets/js/sections/intro.js"></script>
+<script src="/assets/js/sections/completion.js"></script>
+<script src="/assets/js/sections/vep.js"></script>
+<script src="/assets/js/sections/track.js"></script>
+<script src="/assets/js/sections/species.js"></script>
+<script src="/assets/js/sections/folding.js"></script>
+<script src="/assets/js/sections/tokenizer.js"></script>
+<script src="/assets/js/sections/loss.js"></script>
+<script src="/assets/js/sections/data.js"></script>
+<script src="/assets/js/sections/architecture.js"></script>
+<script src="/assets/js/sections/longcontext.js"></script>
+<script src="/assets/js/sections/results.js"></script>
+<script src="/assets/js/sections/efficiency.js"></script>
+<script src="/assets/js/sections/sandbox.js"></script>
+<script src="/assets/js/sections/umap.js"></script>
+<script src="/assets/js/sections/tree.js"></script>
+<script src="/assets/js/banner.js"></script>
+<script src="/assets/js/tabs.js"></script>
+</body>
+</html>

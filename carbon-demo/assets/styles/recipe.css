@@ -1,0 +1,28 @@
+/* recipe.css, overrides for the Recipe panel demos (tokenizer, loss,
+   data, architecture). Most of those demos rely on the shared
+   .demo / .stat-row / .seq-block primitives, so this file only carries
+   the narrow-viewport overrides their inline grid layouts need. */
+
+/* Model section responsive overrides */
+@media (max-width: 720px) {
+  #demo7 #d7-cols { grid-template-columns: 1fr !important; }
+  #demo9 > div:first-child { grid-template-columns: 1fr !important; }
+
+  /* On narrow viewports the input is placed on its own row underneath
+     the "type DNA" label so it can take the full toolbar width instead
+     of fighting for space with the label + status pill. */
+  #demo7 #d7-input { flex-basis: 100%; width: 100%; min-width: 0; }
+
+  /* Allow the rendered token chips (1-mer and 6-mer) to wrap to the next
+     line instead of scrolling horizontally. The seq-block defaults to
+     `white-space: pre; overflow-x: auto;` for desktop where horizontal
+     scroll is fine, but on mobile that pushes the DNA sequence off-screen.
+     `word-break: break-all` lets the chain break between chips (and, as a
+     safety net, between letters) so nothing extends past the demo card. */
+  #demo7 #d7-1mer,
+  #demo7 #d7-6mer {
+    white-space: normal;
+    overflow-x: visible;
+    word-break: break-all;
+  }
+}

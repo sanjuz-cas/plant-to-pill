@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carbon · DNA Continuation</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Inter:wght@300;400;500;600&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "Inter", "Helvetica Neue", sans-serif;
+    font-size: 12px; font-weight: 300; line-height: 1.6;
+    color: #1a1a1a; background: #fafafa;
+    padding: 24px 32px;
+    max-width: 1280px; margin: 0 auto;
+  }
+
+  h1 {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 16px; font-weight: 400; letter-spacing: 2px;
+  }
+  .meta {
+    font-family: "JetBrains Mono", monospace;
+    color: #888; font-size: 10px; font-weight: 300;
+    letter-spacing: 0.5px; margin-top: 4px;
+  }
+  .header-row {
+    margin-bottom: 20px; padding-bottom: 12px; border-bottom: 1px solid #ddd;
+  }
+
+  .section-title {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11px; font-weight: 400;
+    text-transform: uppercase; letter-spacing: 2px; color: #444;
+    margin-top: 24px; margin-bottom: 8px;
+    border-bottom: 1px solid #ccc; padding-bottom: 4px;
+  }
+  .seq-wrap { position: relative; }
+  .copy-btn {
+    position: absolute; top: 8px; right: 8px; z-index: 2;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 9px; font-weight: 400;
+    padding: 3px 8px; border: 1px solid #ddd; border-radius: 3px;
+    background: #fff; color: #666; cursor: pointer;
+    text-transform: uppercase; letter-spacing: 1px;
+    transition: all 0.15s;
+  }
+  .copy-btn:hover { border-color: #888; color: #1a1a1a; }
+  .copy-btn:disabled { opacity: 0; pointer-events: none; }
+  .copy-btn.copied { background: #1a8a3a; color: #fff; border-color: #1a8a3a; }
+
+  /* --- Examples --- */
+  .examples {
+    display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 6px;
+    align-items: center;
+  }
+  .examples-label {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px; color: #999; text-transform: uppercase; letter-spacing: 1px;
+    margin-right: 4px;
+  }
+  .ex-btn {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px; padding: 3px 8px;
+    border: 1px solid #ddd; border-radius: 3px;
+    background: #fff; color: #666; cursor: pointer;
+    transition: all 0.15s;
+  }
+  .ex-btn:hover { border-color: #888; color: #1a1a1a; }
+  .ex-btn .ex-label {
+    color: #aaa; font-size: 9px; margin-left: 6px; text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* --- Inputs --- */
+  textarea, input[type=number] {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 12px; font-weight: 300; color: #1a1a1a;
+    background: #fff; border: 1px solid #ddd; border-radius: 3px;
+    padding: 8px 12px; outline: none; transition: border 0.15s;
+  }
+  textarea:focus, input[type=number]:focus { border-color: #1a1a1a; }
+  textarea {
+    width: 100%; resize: none; overflow: hidden;
+    letter-spacing: 1px; line-height: 1.7;
+    min-height: 36px;
+  }
+
+  .controls {
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    margin-top: 10px;
+  }
+  .control {
+    display: flex; align-items: center; gap: 6px;
+    font-family: "JetBrains Mono", monospace; font-size: 10px; color: #666;
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  .control input[type=number] {
+    width: 64px; padding: 4px 6px; font-size: 11px; text-align: right;
+  }
+
+  /* Color mode toggle */
+  .mode-group {
+    display: flex; align-items: center; gap: 6px;
+    font-family: "JetBrains Mono", monospace; font-size: 10px; color: #666;
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  .mode-btns { display: flex; }
+  .mode-btn {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px; padding: 4px 9px;
+    border: 1px solid #ccc; border-right: none;
+    background: #fff; color: #666; cursor: pointer;
+    text-transform: uppercase; letter-spacing: 1px;
+    transition: all 0.15s;
+  }
+  .mode-btn:first-child { border-radius: 3px 0 0 3px; }
+  .mode-btn:last-child { border-right: 1px solid #ccc; border-radius: 0 3px 3px 0; }
+  .mode-btn:hover { color: #1a1a1a; }
+  .mode-btn.active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+
+  button.action {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px; font-weight: 400;
+    padding: 5px 12px; border: 1px solid #ccc; border-radius: 3px;
+    background: #fff; color: #555; cursor: pointer;
+    text-transform: uppercase; letter-spacing: 1.5px;
+    transition: all 0.15s;
+  }
+  button.action:hover { border-color: #888; color: #1a1a1a; }
+  button.action.primary { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+  button.action.primary:hover { background: #000; }
+  button.action:disabled { opacity: 0.4; cursor: not-allowed; }
+  button.action.primary:disabled { background: #888; border-color: #888; }
+
+  .button-row { margin-left: auto; display: flex; gap: 6px; }
+
+  /* --- Status --- */
+  .status {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 10px; color: #666;
+    text-transform: uppercase; letter-spacing: 1.5px;
+    margin-top: 10px; min-height: 14px;
+  }
+  .status.error { color: #b00020; text-transform: none; letter-spacing: 0.3px; }
+  .status .dot {
+    display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+    background: #888; margin-right: 6px; vertical-align: middle;
+  }
+  .status.streaming .dot { background: #1a8a3a; animation: pulse 1.2s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: 0.3; } }
+
+  /* --- Output layout: sequence + sticky stats sidebar --- */
+  .output-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 200px;
+    gap: 16px;
+    align-items: start;
+  }
+
+  .seq-block {
+    font-family: "JetBrains Mono", monospace;
+    background: #f4f4f4; border: 1px solid #ddd;
+    padding: 16px 20px; overflow-x: auto;
+    white-space: pre; font-size: 12px; font-weight: 400;
+    line-height: 1.85; letter-spacing: 1.5px;
+    min-height: 80px;
+  }
+  .seq-block.empty { color: #aaa; font-weight: 300; letter-spacing: normal; }
+  .seq-line { white-space: pre; }
+  .pos { color: #bbb; user-select: none; font-weight: 300; }
+  .seq-line.tail::after {
+    content: "";
+    display: inline-block; width: 7px; height: 14px;
+    background: #1a1a1a; vertical-align: text-bottom;
+    margin-left: 2px;
+    animation: blink 1s step-end infinite;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* Token-block hover (for logprob/bases mode tooltips later) */
+  .tok { transition: background 0.1s; }
+  .tok:hover { background: #e8e8e8; }
+
+  /* --- Stats sidebar --- */
+  .stats {
+    position: sticky; top: 16px;
+    border: 1px solid #ddd; background: #fff;
+  }
+  .stat {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: 8px 12px;
+    border-bottom: 1px solid #eee;
+    font-family: "JetBrains Mono", monospace;
+  }
+  .stat:last-child { border-bottom: none; }
+  .stat-label {
+    font-size: 9px; color: #999;
+    text-transform: uppercase; letter-spacing: 1.2px; font-weight: 300;
+  }
+  .stat-value {
+    font-size: 12px; font-weight: 400; color: #1a1a1a;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat-value .unit { font-size: 9px; color: #999; margin-left: 3px; font-weight: 300; }
+
+  /* Logprob legend (only shown in logprob mode) */
+  .legend {
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: #fff; border: 1px solid #ddd;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 9px; color: #888;
+    text-transform: uppercase; letter-spacing: 1px;
+    display: none;
+  }
+  .legend.show { display: block; }
+  .legend-bar {
+    height: 6px; margin: 4px 0 3px;
+    background: linear-gradient(to right, #d83a2a, #888, #1a1a1a);
+    border-radius: 1px;
+  }
+  .legend-row { display: flex; justify-content: space-between; }
+  .lp-chart {
+    display: block; width: 100%; height: 40px;
+    margin-top: 8px;
+  }
+
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+</style>
+</head>
+<body>
+
+<div class="header-row">
+  <h1>CARBON · DNA CONTINUATION</h1>
+  <div class="meta" id="meta">loading…</div>
+</div>
+
+<div class="section-title">Prompt</div>
+
+<div class="examples">
+  <span class="examples-label">examples</span>
+  <button class="ex-btn" data-ex="">empty<span class="ex-label">unconditional</span></button>
+  <button class="ex-btn" data-ex="ATG">ATG<span class="ex-label">start codon</span></button>
+  <button class="ex-btn" data-ex="TATAAA">TATAAA<span class="ex-label">TATA box</span></button>
+  <button class="ex-btn" data-ex="CGCGCGCGCG">CGCG…<span class="ex-label">CpG island</span></button>
+  <button class="ex-btn" data-ex="ATGGCCAAGCTGACCAGCGAGCTGCTG">ATGGCC…<span class="ex-label">ORF start</span></button>
+  <button class="ex-btn" data-ex="AAAAAAAAAAAAAAAA">A·16<span class="ex-label">poly-A</span></button>
+</div>
+
+<textarea id="prompt" rows="1" spellcheck="false" autocapitalize="characters">AGT</textarea>
+
+<div class="controls">
+  <label class="control">max tokens
+    <input type="number" id="max_tokens" value="128" min="1" max="2048" step="1">
+  </label>
+  <label class="control">temperature
+    <input type="number" id="temperature" value="1.0" min="0" max="2" step="0.1">
+  </label>
+  <label class="control">top-p
+    <input type="number" id="top_p" value="1.0" min="0" max="1" step="0.05">
+  </label>
+
+  <div class="mode-group">color
+    <div class="mode-btns" id="mode-btns">
+      <button class="mode-btn active" data-mode="none">none</button>
+      <button class="mode-btn" data-mode="bases">bases</button>
+      <button class="mode-btn" data-mode="logprob">logprob</button>
+    </div>
+  </div>
+
+  <div class="button-row">
+    <button id="clear-btn" class="action">clear</button>
+    <button id="stop-btn" class="action" disabled>stop</button>
+    <button id="generate-btn" class="action primary">generate</button>
+  </div>
+</div>
+
+<div class="status" id="status"><span class="dot"></span><span id="status-text">idle</span></div>
+
+<div class="section-title">Sequence</div>
+
+<div class="output-row">
+  <div class="seq-wrap">
+    <button id="copy-btn" class="copy-btn" disabled>copy</button>
+    <div class="seq-block empty" id="seq">prompt + generated bases will stream here</div>
+  </div>
+
+  <div>
+    <div class="stats" id="stats">
+      <div class="stat"><span class="stat-label">prompt</span><span class="stat-value" id="stat-prompt">0<span class="unit">bp</span></span></div>
+      <div class="stat"><span class="stat-label">generated</span><span class="stat-value" id="stat-gen">0<span class="unit">bp</span></span></div>
+      <div class="stat"><span class="stat-label">tokens</span><span class="stat-value" id="stat-tok">0</span></div>
+      <div class="stat"><span class="stat-label">elapsed</span><span class="stat-value" id="stat-time">0.0<span class="unit">s</span></span></div>
+      <div class="stat"><span class="stat-label">throughput</span><span class="stat-value" id="stat-rate">0<span class="unit">bp/s</span></span></div>
+      <div class="stat"><span class="stat-label">GC content</span><span class="stat-value" id="stat-gc">—</span></div>
+      <div class="stat"><span class="stat-label">mean logprob</span><span class="stat-value" id="stat-lp">—</span></div>
+      <div class="stat"><span class="stat-label">perplexity</span><span class="stat-value" id="stat-ppl">—</span></div>
+    </div>
+    <div class="legend" id="legend">
+      <div>token logprob</div>
+      <div class="legend-bar" id="legend-bar"></div>
+      <div class="legend-row"><span id="lp-min">—</span><span id="lp-mid">—</span><span id="lp-max">—</span></div>
+      <svg id="lp-chart" class="lp-chart" preserveAspectRatio="none"></svg>
+    </div>
+  </div>
+</div>
+
+<script>
+const els = {
+  prompt: document.getElementById("prompt"),
+  maxTokens: document.getElementById("max_tokens"),
+  temperature: document.getElementById("temperature"),
+  topP: document.getElementById("top_p"),
+  generate: document.getElementById("generate-btn"),
+  stop: document.getElementById("stop-btn"),
+  clear: document.getElementById("clear-btn"),
+  modeBtns: document.getElementById("mode-btns"),
+  copy: document.getElementById("copy-btn"),
+  seq: document.getElementById("seq"),
+  meta: document.getElementById("meta"),
+  status: document.getElementById("status"),
+  statusText: document.getElementById("status-text"),
+  legend: document.getElementById("legend"),
+  statPrompt: document.getElementById("stat-prompt"),
+  statGen: document.getElementById("stat-gen"),
+  statTok: document.getElementById("stat-tok"),
+  statTime: document.getElementById("stat-time"),
+  statRate: document.getElementById("stat-rate"),
+  statGc: document.getElementById("stat-gc"),
+  statLp: document.getElementById("stat-lp"),
+  statPpl: document.getElementById("stat-ppl"),
+};
+
+let promptBases = "";
+let genText = "";
+let genTokens = [];      // [{text, logprob, top}]
+let genTokenAtBase = []; // genTokenAtBase[i] = token index for generated base i
+let abortCtrl = null;
+let startTime = 0;
+let timer = null;
+let colorMode = "none";
+let charMetrics = null;  // {prefixW, blockW} pixel widths in seq-block font
+
+// --- Color schemes (RGB tuples, used for both fg color and faint bg tint) ---
+const BASE_RGB = {
+  A: [58, 138, 62],
+  C: [46, 107, 184],
+  G: [181, 137, 30],
+  T: [181, 58, 58],
+  N: [136, 136, 136],
+};
+const PROMPT_RGB = [170, 170, 170];
+const DARK_RGB = [26, 26, 26];
+const MID_RGB = [136, 136, 136];
+const RED_RGB = [216, 58, 42];
+const BG_ALPHA = 0.12;
+
+// Logprob gradient: dynamically scaled to observed min/mean/max.
+// Most confident (max) → DARK_RGB, mean → MID_RGB, most uncertain (min) → RED_RGB
+let lpRange = null; // {min, mid, max} or null
+function lerp(a, b, t) { return Math.round(a + (b - a) * t); }
+function lerpRgb(c1, c2, t) {
+  return [lerp(c1[0], c2[0], t), lerp(c1[1], c2[1], t), lerp(c1[2], c2[2], t)];
+}
+function recomputeLpRange() {
+  if (!genTokens.length) { lpRange = null; updateLegend(); return; }
+  let min = Infinity, max = -Infinity, sum = 0, n = 0;
+  for (const t of genTokens) {
+    if (t.logprob == null || isNaN(t.logprob)) continue;
+    if (t.logprob < min) min = t.logprob;
+    if (t.logprob > max) max = t.logprob;
+    sum += t.logprob; n++;
+  }
+  lpRange = n ? { min, mid: sum / n, max } : null;
+  updateLegend();
+}
+function updateLegend() {
+  const minEl = document.getElementById("lp-min");
+  const midEl = document.getElementById("lp-mid");
+  const maxEl = document.getElementById("lp-max");
+  const bar = document.getElementById("legend-bar");
+  if (!lpRange) {
+    minEl.textContent = midEl.textContent = maxEl.textContent = "—";
+    bar.style.background = "linear-gradient(to right, #d83a2a, #888, #1a1a1a)";
+  } else {
+    const { min, mid, max } = lpRange;
+    minEl.textContent = min.toFixed(1);
+    midEl.textContent = mid.toFixed(1);
+    maxEl.textContent = max.toFixed(1);
+    const midPct = max > min ? ((mid - min) / (max - min)) * 100 : 50;
+    bar.style.background = `linear-gradient(to right, #d83a2a 0%, #888 ${midPct.toFixed(1)}%, #1a1a1a 100%)`;
+  }
+  updateLpChart();
+}
+
+function updateLpChart() {
+  const svg = document.getElementById("lp-chart");
+  if (!svg) return;
+  if (!lpRange || genTokens.length < 2) {
+    svg.innerHTML = "";
+    return;
+  }
+  const W = 200, H = 40, pad = 2;
+  const { min, mid, max } = lpRange;
+  const yTop = pad, yBot = H - pad;
+  const yScale = (lp) => yTop + (1 - (lp - min) / Math.max(1e-9, max - min)) * (yBot - yTop);
+
+  // Subsample with power-of-two step so the visible point set is stable
+  // between transitions (transitions at n = target, 2*target, 4*target, ...).
+  const n = genTokens.length;
+  const target = 1000;
+  let step = 1;
+  while (Math.ceil(n / step) > target) step *= 2;
+  const xScale = (i) => (n === 1 ? W / 2 : pad + (i / (n - 1)) * (W - 2 * pad));
+
+  let d = "";
+  let started = false;
+  for (let i = 0; i < n; i += step) {
+    const lp = genTokens[i].logprob;
+    if (lp == null || isNaN(lp)) continue;
+    d += (started ? "L" : "M") + xScale(i).toFixed(1) + " " + yScale(lp).toFixed(1);
+    started = true;
+  }
+  // Always anchor the very last token, even if subsampling skipped it.
+  if ((n - 1) % step !== 0) {
+    const lp = genTokens[n - 1].logprob;
+    if (lp != null && !isNaN(lp)) {
+      d += "L" + xScale(n - 1).toFixed(1) + " " + yScale(lp).toFixed(1);
+    }
+  }
+
+  const midPct = max > min ? ((mid - min) / (max - min)) * 100 : 50;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.innerHTML = `
+    <defs>
+      <linearGradient id="lp-grad" gradientUnits="userSpaceOnUse" x1="0" y1="${yBot}" x2="0" y2="${yTop}">
+        <stop offset="0%" stop-color="#d83a2a"/>
+        <stop offset="${midPct.toFixed(1)}%" stop-color="#888"/>
+        <stop offset="100%" stop-color="#1a1a1a"/>
+      </linearGradient>
+    </defs>
+    <path d="${d}" fill="none" stroke="url(#lp-grad)" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"/>
+  `;
+}
+function logprobRgb(lp) {
+  if (lp == null || isNaN(lp) || !lpRange) return DARK_RGB;
+  const { min, mid, max } = lpRange;
+  if (max === min) return MID_RGB;
+  if (lp >= mid) {
+    const denom = max - mid;
+    const t = denom > 0 ? Math.min(1, Math.max(0, (max - lp) / denom)) : 0;
+    return lerpRgb(DARK_RGB, MID_RGB, t);
+  }
+  const denom = mid - min;
+  const t = denom > 0 ? Math.min(1, Math.max(0, (mid - lp) / denom)) : 0;
+  return lerpRgb(MID_RGB, RED_RGB, t);
+}
+
+// --- Init ---
+async function init() {
+  try {
+    const resp = await fetch("/config");
+    const cfg = await resp.json();
+    els.meta.textContent = `${cfg.model} · ${cfg.endpoint}`;
+  } catch {
+    els.meta.textContent = "config unavailable";
+  }
+}
+
+// --- Auto-grow textarea ---
+function autoGrow() {
+  els.prompt.style.height = "auto";
+  els.prompt.style.height = els.prompt.scrollHeight + "px";
+}
+els.prompt.addEventListener("input", () => {
+  const cleaned = cleanPrompt(els.prompt.value);
+  if (cleaned !== els.prompt.value) {
+    const pos = els.prompt.selectionStart;
+    els.prompt.value = cleaned;
+    els.prompt.setSelectionRange(pos, pos);
+  }
+  autoGrow();
+});
+window.addEventListener("load", autoGrow);
+
+// --- Prompt validation ---
+function cleanPrompt(s) {
+  return s.toUpperCase().replace(/[^ACGTN]/g, "");
+}
+
+// --- Sequence rendering ---
+function rgbForBase(absIdx, base) {
+  // absIdx: 0-indexed position in prompt+gen string
+  if (absIdx < promptBases.length) return PROMPT_RGB;
+  if (colorMode === "bases") return BASE_RGB[base] || DARK_RGB;
+  if (colorMode === "logprob") {
+    const genIdx = absIdx - promptBases.length;
+    const tok = genTokens[genTokenAtBase[genIdx]];
+    return tok ? logprobRgb(tok.logprob) : DARK_RGB;
+  }
+  return DARK_RGB;
+}
+
+function measureSeqChars() {
+  const probe = document.createElement("div");
+  probe.style.cssText = "position:absolute;visibility:hidden;top:-9999px;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:400;letter-spacing:1.5px;white-space:pre";
+  probe.textContent = "    1  ";
+  document.body.appendChild(probe);
+  const prefixW = probe.getBoundingClientRect().width;
+  probe.textContent = "AAAAAAAAAA  ";
+  const blockW = probe.getBoundingClientRect().width;
+  document.body.removeChild(probe);
+  charMetrics = { prefixW, blockW };
+}
+
+function basesPerLine() {
+  if (!charMetrics) measureSeqChars();
+  const cs = getComputedStyle(els.seq);
+  const padL = parseFloat(cs.paddingLeft) || 0;
+  const padR = parseFloat(cs.paddingRight) || 0;
+  const contentW = els.seq.clientWidth - padL - padR;
+  if (contentW <= 0 || !charMetrics.blockW) return 60;
+  const blocks = Math.floor((contentW - charMetrics.prefixW) / charMetrics.blockW);
+  return Math.max(10, Math.min(blocks, 30) * 10);
+}
+
+// Cheap discriminator: bases sharing a key inside the same 10-block fold into one span.
+function colorKey(absIdx, base) {
+  if (absIdx < promptBases.length) return "p";
+  if (colorMode === "none") return "g";
+  if (colorMode === "bases") return "b" + base;
+  if (colorMode === "logprob") return "t" + genTokenAtBase[absIdx - promptBases.length];
+  return "g";
+}
+
+function buildLineHTML(start, lineBases) {
+  const pos = String(start + 1).padStart(5, " ");
+  let html = `<span class="pos">${pos}</span>  `;
+  let j = 0;
+  while (j < lineBases.length) {
+    if (j > 0 && j % 10 === 0) html += "  ";
+    const startAbs = start + j;
+    const startKey = colorKey(startAbs, lineBases[j]);
+    const blockEnd = Math.min(lineBases.length, Math.floor(j / 10) * 10 + 10);
+    let runEnd = j + 1;
+    while (runEnd < blockEnd && colorKey(start + runEnd, lineBases[runEnd]) === startKey) runEnd++;
+    const runText = lineBases.slice(j, runEnd);
+    const [r, g, b] = rgbForBase(startAbs, lineBases[j]);
+    const tinted = colorMode !== "none" && startAbs >= promptBases.length;
+    const bg = tinted ? `;background:rgba(${r},${g},${b},${BG_ALPHA})` : "";
+    html += `<span style="color:rgb(${r},${g},${b})${bg}">${runText}</span>`;
+    j = runEnd;
+  }
+  return html;
+}
+
+function updateTail() {
+  const prev = els.seq.querySelector(".seq-line.tail");
+  if (prev) prev.classList.remove("tail");
+  const last = els.seq.lastElementChild;
+  if (abortCtrl && last && last.classList.contains("seq-line")) last.classList.add("tail");
+}
+
+// Re-render frequency for logprob: tolerance is max of 0.2 absolute and 5% of current range.
+function lpRangeShifted(prev, curr) {
+  if (!prev || !curr) return prev !== curr;
+  const range = Math.max(0.1, prev.max - prev.min);
+  const tol = Math.max(0.2, range * 0.05);
+  return Math.abs(prev.min - curr.min) > tol
+      || Math.abs(prev.mid - curr.mid) > tol
+      || Math.abs(prev.max - curr.max) > tol;
+}
+
+let lastRenderedMode = null;
+let lastRenderedBpl = null;
+let lastRenderedLpRange = null;
+
+function fullRender(bpl) {
+  const total = promptBases + genText;
+  if (!total) {
+    els.seq.classList.add("empty");
+    els.seq.textContent = "prompt + generated bases will stream here";
+  } else {
+    els.seq.classList.remove("empty");
+    const parts = [];
+    for (let i = 0; i < total.length; i += bpl) {
+      parts.push(`<div class="seq-line">${buildLineHTML(i, total.slice(i, i + bpl))}</div>`);
+    }
+    els.seq.innerHTML = parts.join("");
+  }
+  lastRenderedMode = colorMode;
+  lastRenderedBpl = bpl;
+  lastRenderedLpRange = lpRange ? { ...lpRange } : null;
+  updateTail();
+}
+
+function incrementalRender(bpl) {
+  const total = promptBases + genText;
+  const totalLines = Math.ceil(total.length / bpl);
+  const lineDivs = els.seq.children;
+  if (lineDivs.length > 0) {
+    const lastIdx = lineDivs.length - 1;
+    const start = lastIdx * bpl;
+    lineDivs[lastIdx].innerHTML = buildLineHTML(start, total.slice(start, start + bpl));
+  }
+  if (totalLines > lineDivs.length) {
+    const parts = [];
+    for (let li = lineDivs.length; li < totalLines; li++) {
+      const start = li * bpl;
+      parts.push(`<div class="seq-line">${buildLineHTML(start, total.slice(start, start + bpl))}</div>`);
+    }
+    els.seq.insertAdjacentHTML("beforeend", parts.join(""));
+  }
+  lastRenderedLpRange = lpRange ? { ...lpRange } : null;
+  updateTail();
+}
+
+function renderSequence() {
+  if (colorMode === "logprob") recomputeLpRange();
+  const total = promptBases + genText;
+  els.copy.disabled = total.length === 0;
+  const bpl = basesPerLine();
+  const totalLines = total ? Math.ceil(total.length / bpl) : 0;
+  const renderedLines = els.seq.children.length;
+  const needFull =
+    !total ||
+    lastRenderedMode !== colorMode ||
+    lastRenderedBpl !== bpl ||
+    totalLines < renderedLines ||
+    (colorMode === "logprob" && lpRangeShifted(lastRenderedLpRange, lpRange));
+  if (needFull) fullRender(bpl);
+  else incrementalRender(bpl);
+}
+
+let renderQueued = false;
+function scheduleRender() {
+  if (renderQueued) return;
+  renderQueued = true;
+  requestAnimationFrame(() => { renderQueued = false; renderSequence(); });
+}
+
+// --- Stats ---
+function gcContent(s) {
+  if (!s) return null;
+  let gc = 0;
+  for (const c of s) if (c === "G" || c === "C") gc++;
+  return (gc / s.length) * 100;
+}
+
+function meanLogprob() {
+  if (!genTokens.length) return null;
+  let sum = 0, n = 0;
+  for (const t of genTokens) {
+    if (t.logprob != null && !isNaN(t.logprob)) { sum += t.logprob; n++; }
+  }
+  return n ? sum / n : null;
+}
+
+function updateStats() {
+  els.statPrompt.innerHTML = `${promptBases.length}<span class="unit">bp</span>`;
+  els.statGen.innerHTML = `${genText.length}<span class="unit">bp</span>`;
+  els.statTok.textContent = genTokens.length;
+  const elapsed = startTime ? (performance.now() - startTime) / 1000 : 0;
+  els.statTime.innerHTML = `${elapsed.toFixed(1)}<span class="unit">s</span>`;
+  const rate = elapsed > 0 ? Math.round(genText.length / elapsed) : 0;
+  els.statRate.innerHTML = `${rate}<span class="unit">bp/s</span>`;
+  const gc = gcContent(genText);
+  els.statGc.textContent = gc == null ? "—" : `${gc.toFixed(1)}%`;
+  const mlp = meanLogprob();
+  els.statLp.textContent = mlp == null ? "—" : mlp.toFixed(2);
+  els.statPpl.textContent = mlp == null ? "—" : Math.exp(-mlp).toFixed(1);
+}
+
+function setStatus(text, mode = "") {
+  els.statusText.textContent = text;
+  els.status.className = "status" + (mode ? " " + mode : "");
+}
+
+// --- Color mode toggle ---
+els.modeBtns.querySelectorAll(".mode-btn").forEach(b => {
+  b.addEventListener("click", () => {
+    colorMode = b.dataset.mode;
+    els.modeBtns.querySelectorAll(".mode-btn").forEach(x => x.classList.toggle("active", x === b));
+    els.legend.classList.toggle("show", colorMode === "logprob");
+    renderSequence();
+  });
+});
+
+// --- Generation ---
+async function generate() {
+  if (abortCtrl) return;
+
+  promptBases = cleanPrompt(els.prompt.value);
+  genText = "";
+  genTokens = [];
+  genTokenAtBase = [];
+  startTime = performance.now();
+  abortCtrl = new AbortController();
+
+  els.generate.disabled = true;
+  els.stop.disabled = false;
+  setStatus("connecting…", "streaming");
+  renderSequence();
+  updateStats();
+  timer = setInterval(updateStats, 100);
+
+  const body = {
+    prompt: promptBases,
+    max_tokens: parseInt(els.maxTokens.value),
+    temperature: parseFloat(els.temperature.value),
+    top_p: parseFloat(els.topP.value),
+  };
+
+  try {
+    const resp = await fetch("/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+      signal: abortCtrl.signal,
+    });
+
+    if (!resp.ok) {
+      throw new Error(`HTTP ${resp.status}: ${await resp.text()}`);
+    }
+
+    setStatus("streaming", "streaming");
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const events = buffer.split("\n\n");
+      buffer = events.pop();
+      for (const ev of events) {
+        const line = ev.trim();
+        if (!line.startsWith("data:")) continue;
+        const data = JSON.parse(line.slice(5).trim());
+        if (data.error) throw new Error(data.error);
+        if (data.done) continue;
+        if (data.logprobs) {
+          const lp = data.logprobs;
+          for (let i = 0; i < lp.tokens.length; i++) {
+            const tokIdx = genTokens.length;
+            genTokens.push({
+              text: lp.tokens[i],
+              logprob: lp.token_logprobs[i],
+              top: lp.top_logprobs[i],
+            });
+            for (let j = 0; j < lp.tokens[i].length; j++) genTokenAtBase.push(tokIdx);
+          }
+        }
+        if (data.text) {
+          genText += cleanPrompt(data.text);
+          scheduleRender();
+        }
+      }
+    }
+    setStatus("done");
+  } catch (e) {
+    if (e.name === "AbortError") setStatus("stopped");
+    else setStatus(e.message, "error");
+  } finally {
+    abortCtrl = null;
+    clearInterval(timer);
+    updateStats();
+    renderSequence();
+    els.generate.disabled = false;
+    els.stop.disabled = true;
+  }
+}
+
+function stop() { if (abortCtrl) abortCtrl.abort(); }
+
+function clearAll() {
+  if (abortCtrl) return;
+  promptBases = "";
+  genText = "";
+  genTokens = [];
+  genTokenAtBase = [];
+  startTime = 0;
+  renderSequence();
+  updateStats();
+  setStatus("idle");
+}
+
+els.generate.addEventListener("click", generate);
+els.stop.addEventListener("click", stop);
+els.clear.addEventListener("click", clearAll);
+
+els.copy.addEventListener("click", async () => {
+  const text = promptBases + genText;
+  if (!text) return;
+  try {
+    await navigator.clipboard.writeText(text);
+    els.copy.classList.add("copied");
+    els.copy.textContent = "copied";
+  } catch {
+    els.copy.textContent = "failed";
+  }
+  setTimeout(() => {
+    els.copy.classList.remove("copied");
+    els.copy.textContent = "copy";
+  }, 1200);
+});
+
+els.prompt.addEventListener("keydown", e => {
+  if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+    e.preventDefault();
+    generate();
+  }
+});
+
+document.querySelectorAll(".ex-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    els.prompt.value = btn.dataset.ex;
+    autoGrow();
+    els.prompt.focus();
+  });
+});
+
+init();
+updateStats();
+
+// Re-render on width change (debounced via rAF) and after web font loads
+let roPending = false;
+const ro = new ResizeObserver(() => {
+  if (roPending) return;
+  roPending = true;
+  requestAnimationFrame(() => { roPending = false; renderSequence(); });
+});
+ro.observe(els.seq);
+
+if (document.fonts && document.fonts.ready) {
+  document.fonts.ready.then(() => { charMetrics = null; renderSequence(); });
+}
+</script>
+</body>
+</html>

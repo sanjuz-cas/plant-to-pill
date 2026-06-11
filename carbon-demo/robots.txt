@@ -1,0 +1,74 @@
+# robots.txt for the Carbon demo.
+#
+# Policy: explicitly welcome every crawler — including LLM-training and
+# answer-engine bots — to read the page. The whole point of the demo is
+# to make the model's behaviour and the surrounding write-up easy to
+# discover and to cite. The only path we keep out of the index is the
+# /social-banner utility page, which is a screenshot rig, not content.
+#
+# The Sitemap line below is rewritten with an absolute URL at request
+# time by app.py (it has to be absolute per the sitemaps protocol).
+
+User-agent: *
+Allow: /
+Disallow: /social-banner
+
+# AI / LLM crawlers, called out by name so it's unambiguous that this
+# site opts IN to training and to live answer-engine retrieval.
+User-agent: GPTBot
+Allow: /
+Disallow: /social-banner
+
+User-agent: ChatGPT-User
+Allow: /
+Disallow: /social-banner
+
+User-agent: OAI-SearchBot
+Allow: /
+Disallow: /social-banner
+
+User-agent: ClaudeBot
+Allow: /
+Disallow: /social-banner
+
+User-agent: Claude-Web
+Allow: /
+Disallow: /social-banner
+
+User-agent: anthropic-ai
+Allow: /
+Disallow: /social-banner
+
+User-agent: PerplexityBot
+Allow: /
+Disallow: /social-banner
+
+User-agent: Perplexity-User
+Allow: /
+Disallow: /social-banner
+
+User-agent: Google-Extended
+Allow: /
+Disallow: /social-banner
+
+User-agent: Applebot-Extended
+Allow: /
+Disallow: /social-banner
+
+User-agent: CCBot
+Allow: /
+Disallow: /social-banner
+
+User-agent: Bytespider
+Allow: /
+Disallow: /social-banner
+
+User-agent: cohere-ai
+Allow: /
+Disallow: /social-banner
+
+User-agent: Meta-ExternalAgent
+Allow: /
+Disallow: /social-banner
+
+Sitemap: {{SITE_URL}}/sitemap.xml

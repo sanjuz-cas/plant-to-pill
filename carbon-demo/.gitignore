@@ -1,0 +1,21 @@
+# Python build artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+
+# Virtual env
+env/
+.env
+.venv/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Paper source (kept private; not deployed to the Space)
+paper/

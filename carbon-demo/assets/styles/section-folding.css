@@ -1,0 +1,137 @@
+/* section-folding.css, §5 Folding viewers and AA pair grid.
+   Two square 3Dmol canvases side by side, optional loading overlay,
+   pLDDT colour legend, mRNA flow strip, and the carbon/reference AA
+   row pair with its shared mismatch legend. */
+
+/* --- §5 Folding viewers --- */
+/* Two square 3Dmol canvases side by side. On narrow screens (<720px) we
+   stack them vertically so each viewer keeps a comfortable size. */
+.fold-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+  margin-top: 12px;
+}
+.fold-viewer-col { display: flex; flex-direction: column; }
+.fold-viewer-label {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 9px; color: #888; text-transform: uppercase; letter-spacing: 1.5px;
+  margin-bottom: 4px;
+}
+.fold-viewer {
+  position: relative;
+  width: 100%; aspect-ratio: 1 / 1;
+  background: #fafaf7;
+  border: 1px solid #eee;
+  overflow: hidden;
+}
+.fold-viewer canvas { display: block; transition: opacity .15s ease-out; }
+.fold-viewer .fold-empty {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-family: "JetBrains Mono", monospace; font-size: 10px;
+  color: #bbb; letter-spacing: 1.5px; text-transform: uppercase;
+  pointer-events: none;
+}
+/* Loading overlay shown over the cartoon while runFold() is in flight.
+   The cached cartoon stays dimly visible underneath so the visitor can
+   still compare to it once the fresh result lands. */
+.fold-viewer .fold-overlay {
+  position: absolute; inset: 0;
+  display: none; align-items: center; justify-content: center; gap: 8px;
+  background: rgba(250, 250, 247, 0.72);
+  font-family: "JetBrains Mono", monospace; font-size: 10px;
+  color: #555; letter-spacing: 1.5px; text-transform: uppercase;
+  pointer-events: none;
+}
+.fold-viewer .fold-overlay .dot {
+  display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+  background: #317f3f; animation: pulse 1.2s ease-in-out infinite;
+}
+.fold-viewer.running .fold-overlay { display: flex; }
+.fold-viewer.running canvas { opacity: 0.28; }
+/* Same overlay reused for genes whose precomputed fixture isn't ready
+   yet (HF endpoint downtime, fresh symbol added to the list, etc.).
+   Canvas fades almost fully so the empty WebGL frame doesn't read as
+   a bug, the overlay carries the explanation instead. */
+.fold-viewer.pending .fold-overlay { display: flex; }
+.fold-viewer.pending canvas { opacity: 0.08; }
+.fold-legend {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 9px; color: #888; text-transform: uppercase; letter-spacing: 1.2px;
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 10px;
+}
+/* pLDDT colour key: red = low confidence, beige = mid, blue = high.
+   These three anchor colours are mirrored in plddtToColor() (JS) so
+   the cartoon ribbons land in the same palette as this legend bar. */
+.fold-legend-bar {
+  width: 120px; height: 6px;
+  background: linear-gradient(to right, #b00020 0%, #f0e8e0 50%, #2c5aa0 100%);
+  border-radius: 1px;
+}
+/* Inline warning chip used when a gene is too long for the live fold
+   pipeline (introns push the last exon past our generation budget). */
+.fold-warn {
+  color: #b00020;
+  background: rgba(188, 46, 37, 0.10);
+  padding: 1px 6px;
+  border-radius: 2px;
+}
+/* Materialises the DNA → mRNA → protein arrow under the gene info,
+   using the same monospace family/colour family as the rest of the
+   metadata strip. The chevron is drawn with → to read as a flow,
+   not a list. */
+.mrna-info {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  color: #888;
+  margin: 4px 0 16px;
+  letter-spacing: 0.3px;
+}
+.mrna-info .arrow { color: #b8b8b6; padding: 0 6px; }
+.mrna-info strong { color: #555; font-weight: 500; }
+.mrna-info .mrna-trunc {
+  color: #b00020;
+  background: rgba(188, 46, 37, 0.08);
+  padding: 0 4px;
+  margin-left: 6px;
+  border-radius: 2px;
+}
+/* Two-column AA grid: Carbon (left) / Reference (right), mirroring the
+   fold-grid below so the eye lines up "carbon prediction → carbon
+   fold" on one side and "reference truth → reference fold" on the
+   other. Stacks on narrow screens to keep each line readable. */
+.fold-aa-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+  margin-top: 4px;
+}
+.fold-aa-col { display: flex; flex-direction: column; min-width: 0; }
+/* Soft-wrap as a safety net if the wrapped 40-char line ever still
+   overflows (very narrow viewport, big font-size override, etc.).
+   The JS still inserts \n every 40 chars so Carbon and Reference
+   line up row-by-row in the common case. */
+.fold-aa-col .seq-block { white-space: pre-wrap; word-break: break-all; overflow-x: visible; }
+@media (max-width: 720px) {
+  .fold-grid { grid-template-columns: 1fr; }
+  .fold-aa-grid { grid-template-columns: 1fr; }
+}
+
+/* Shared highlight legend for the carbon/reference AA pair. The legend
+   sat duplicated inside each row's seq-label, which crowded the labels
+   to two lines at half-card width. Lifting it out (mirrors how
+   .fold-legend works for the pLDDT viewers below) lets each row's label
+   stay on a single line. */
+.fold-aa-legend {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 9px; color: #888; text-transform: uppercase; letter-spacing: 1.2px;
+  display: flex; align-items: center; flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-top: 10px;
+}
+.fold-aa-legend-swatch {
+  display: inline-block;
+  width: 10px; height: 10px;
+  background: rgba(188, 46, 37, 0.18);
+  border: 1px solid rgba(188, 46, 37, 0.35);
+  border-radius: 1px;
+}
+.fold-aa-legend-sep { color: #c8c5b8; }

@@ -1,0 +1,8 @@
+/* header.css, tab-panel show/hide toggles driven by .active.
+   The CARBON title, tagline and tab strip used to live here; they're now
+   part of the editorial hero in banner.css. This file only retains the
+   class that gates panel visibility based on the active tab. */
+
+/* --- Tab panels --- */
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }

@@ -1,0 +1,24 @@
+/* base.css, global reset, page background, container, scrollbar.
+   Defines the @keyframes (pulse) referenced from .status, sandbox, and
+   .fold-viewer.running so it has to load before any consumer. */
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: "Inter", "Helvetica Neue", sans-serif;
+  font-size: 13px; font-weight: 300; line-height: 1.7;
+  color: #1f1f1d;
+  /* Plain paper background, the dotted texture + green vertical stripes
+     are reserved for the .carbon-banner hero so the editorial pattern
+     reads as a deliberate hero accent, not page-wide noise. */
+  background: #f7f5ee;
+  padding: 0;
+}
+.container { max-width: 760px; margin: 0 auto; padding: 24px 32px 96px; }
+.container.wide { max-width: 1200px; }
+
+@keyframes pulse { 50% { opacity: 0.3; } }
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+::-webkit-scrollbar-track { background: transparent; }

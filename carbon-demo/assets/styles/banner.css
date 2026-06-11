@@ -1,0 +1,589 @@
+/* banner.css, Carbon editorial hero.
+   Layout: 2-column grid (banner-left / banner-helix). Left column stacks
+   identity row → giant wordmark → tabs along the baseline. Right column hosts
+   a tall, slightly-tilted DNA helix rendered onto a <canvas>.
+   All ink colors live in vars so the helix JS can mirror them. */
+
+/* Brand tokens promoted to :root so anything outside .carbon-banner
+   (notably .sticky-nav, which is a sibling of the banner, not a child)
+   can reference them. Without this, var(--paper) etc. fall back to
+   nothing and the sticky strip ends up transparent. */
+:root {
+  --paper: #f7f5ee;
+  --ink: #1f1f1d;
+  --muted: #8c918b;
+  --hairline: #d6d3c4;
+  --green: #317f3f;
+}
+
+.carbon-banner {
+  position: relative;
+  display: block;
+  background:
+    radial-gradient(circle at 22% 32%, rgba(0, 0, 0, 0.065), transparent 1px),
+    radial-gradient(circle at 78% 64%, rgba(0, 0, 0, 0.06), transparent 1px),
+    linear-gradient(90deg, rgba(49, 127, 63, 0.025), transparent 34%, transparent 66%, rgba(49, 127, 63, 0.025)),
+    var(--paper);
+  background-size: 7px 7px, 11px 11px, auto, auto;
+  /* Bottom hairline drawn via inset shadow rather than border-bottom so it
+     sits *inside* the banner's content area (1px from the bottom). With
+     overflow:hidden the tab's negative margin can't escape into a real
+     border, but an inset shadow lives at the same y as the tab's flush
+     bottom edge and can be covered by the tab's background, which is
+     how the active tab "opens onto" the panel below cleanly. */
+  box-shadow: inset 0 -1px 0 #cfcdbf;
+  overflow: hidden;                    /* clip the tilted helix on the right */
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+.banner-inner {
+  position: relative;
+  max-width: 1200px;     /* matches the site-wide content cap */
+  margin: 0 auto;
+  padding: 20px 32px 0;
+  display: grid;
+  /* Right column dedicated to the DNA helix. */
+  grid-template-columns: minmax(0, 1fr) 460px;
+  gap: 28px;
+  min-height: 440px;     /* compact hero */
+}
+.banner-left {
+  display: grid;
+  grid-template-rows: auto 1fr auto;   /* identity / headline (flexes) / tabs */
+  gap: 18px;
+  min-width: 0;
+}
+
+/* --- Identity row: square model-card thumbnail + breadcrumb path --- */
+.banner-identity {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+/* The SVG ships with its own black frame + white fill (see img/logo.svg),
+   so the parent .logo-card no longer paints a border or a background of
+   its own — the previous cream chip + 1px hairline doubled up with the
+   SVG's own stamp. We keep the fixed 44x44 footprint and a subtle
+   opacity dip on hover so the link still has an affordance. */
+.logo-card {
+  width: 44px;
+  height: 44px;
+  display: block;
+  flex-shrink: 0;
+  text-decoration: none;
+  transition: opacity 0.18s;
+}
+.logo-card:hover { opacity: 0.78; }
+.logo-img {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+.banner-breadcrumb {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  line-height: 1.2;
+}
+.banner-title {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.banner-path {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #8a8a85;
+  text-decoration: none;
+  transition: color 120ms ease;
+}
+a.banner-path,
+a.banner-path:link,
+a.banner-path:visited,
+a.banner-path:hover,
+a.banner-path:active,
+a.banner-path:focus,
+a.banner-path:focus-visible {
+  text-decoration: none;
+}
+a.banner-path { cursor: pointer; }
+a.banner-path:hover,
+a.banner-path:focus-visible { color: var(--green); }
+a.banner-path:focus-visible { outline: none; }
+
+/* --- Headline: oversized wordmark + tagline. Vertically centered in the
+       middle row of the grid so it sits dead-center between the identity row
+       at the top and the tabs at the bottom. --- */
+.banner-headline {
+  align-self: center;
+  min-width: 0;
+}
+.banner-wordmark {
+  margin: 0;
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: clamp(48px, 6.8vw, 96px);
+  font-weight: 800;
+  /* JetBrains Mono is monospace, so it reads wider than Arial Narrow at the
+     same size, tighten the tracking so the wordmark keeps its dense slab feel
+     and the green caret still hugs the right edge of the N. */
+  letter-spacing: -0.04em;
+  line-height: 0.92;
+  display: inline-flex;
+  align-items: stretch;
+  /* Lets the cursor pulse hug the right edge of the N without an extra wrap. */
+  gap: 0;
+}
+/* Left → right ink → green ramp, painted into the glyphs via background-clip.
+   The C anchors in ink black; each letter to the right picks up more of the
+   brand green so the wordmark visually "warms up" toward the blinking caret,
+   which is already solid --green. Mirrors the per-letter <tspan fill> ramp
+   the editorial mock uses (#1f1f1d → #2a5931 in 6 steps) but tuned to land on
+   the brighter brand green so the handoff to the cursor is seamless. */
+.banner-wordmark > span:first-child {
+  display: inline-block;
+  background-image: linear-gradient(
+    90deg,
+    var(--ink) 0%,        /* #1f1f1d, the C reads as pure ink */
+    #233625 35%,          /* slow desaturated step, barely shifts off black */
+    #2a5931 70%,          /* muted forest, matches the editorial wordmark */
+    var(--green) 100%     /* #317f3f, locks the N to the cursor's green */
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+/* Autoregressive cursor: stocky green caret pulsing just past the wordmark.
+   The caret is sized as a fraction of the wordmark font-size (em units) so
+   it scales 1:1 when the title resizes responsively. */
+.banner-cursor {
+  display: inline-block;
+  width: 0.20em;          /* wider, reads as a deliberate block caret */
+  margin-left: 0.15em;
+  align-self: stretch;
+  background: var(--green);
+  /* Caret stretches to the wordmark's flex line, then drops a hair below
+     the baseline via a small negative bottom margin, reads as a
+     deliberate block caret that hangs slightly under the N rather than
+     being trapped inside the cap-height box. The top sits flush with
+     the flex line (margin-top: 0) so it no longer overshoots the N's
+     apex. */
+  margin-top: 0;
+  margin-bottom: -0.015em;
+  animation: cb-cursor-blink 1.05s steps(1) infinite;
+}
+@keyframes cb-cursor-blink {
+  0%, 55%   { opacity: 0.85; }
+  55.01%, 100% { opacity: 0;    }
+}
+@media (prefers-reduced-motion: reduce) {
+  .banner-cursor { animation: none; opacity: 0.5; }
+}
+.banner-subtitle {
+  margin: 8px 0 0;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 12.5px;
+  font-weight: 400;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: #5a5a55;
+}
+/* --- Model specs row: small mono datapoints sitting just under the subtitle.
+       Reads as a fiche-technique extension of the tagline, same family but
+       darker ink (concrete numbers vs editorial label) and tighter tracking
+       so the digits stay legible. The numerical value of each spec is wrapped
+       in a <strong> and inked in --green so the row gets a beat of accent
+       colour that echoes the wordmark caret and the active tab liseré, while
+       the unit/label stays neutral. Dots between items use --muted so they
+       feel like spec-sheet separators, not periods. --- */
+.banner-specs {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #5a5a55;
+  /* Inline <li> would normally render the whitespace between markup tags
+     as a visible space, which stacked on top of the separator's own
+     12px margin to make the row feel airy and uneven. Switching the
+     <ul> to inline-flex collapses the inter-item whitespace so the only
+     spacing between specs is the dot separator's margin — exactly what
+     the separator was designed to provide. flex-wrap lets the row break
+     gracefully on narrow stages (Hugging Face profile cover at 1280px
+     with a smaller wordmark column). */
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+}
+.banner-spec strong {
+  font-weight: 500;
+  color: var(--green);
+}
+.banner-spec + .banner-spec::before {
+  content: "·";
+  margin: 0 12px;
+  color: var(--muted);
+}
+
+/* --- External-resource links (model card, tech report). Sits under
+       .banner-specs; same mono register but the items are anchors with
+       a small "↗" affordance to make the external destination obvious. --- */
+.banner-links {
+  list-style: none;
+  margin: 24px 0 0;
+  padding: 0;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  display: flex; flex-wrap: wrap; gap: 8px 18px;
+}
+.banner-links a {
+  color: #1f1f1d;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(31, 31, 29, 0.25);
+  padding-bottom: 1px;
+  transition: color 0.15s, border-color 0.15s;
+}
+.banner-links a:hover,
+.banner-links a:focus-visible {
+  color: var(--green);
+  border-bottom-color: var(--green);
+  outline: none;
+}
+.banner-links a .arrow {
+  margin-left: 4px;
+  display: inline-block;
+  transform: translateY(-1px);
+  font-size: 10px;
+  letter-spacing: 0;
+}
+
+/* --- Tabs anchored at the bottom of the banner. Their bottom edge sits flush
+       with the banner's inset hairline (see box-shadow on .carbon-banner);
+       inactive tabs cover it with their darker paper, the active tab covers
+       it with --paper so the bottom dissolves into the panel below.
+       Active state is marked by a 2px green liseré on the top edge (an
+       ::before sitting over the hairline border), same green as the wordmark
+       caret and the takeaway rail. --- */
+.banner-tabs {
+  display: flex;
+  position: relative;
+  z-index: 1;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+}
+.banner-tabs .tab {
+  position: relative;
+  display: flex;
+  align-items: center;
+  /* Fixed 150px minimum keeps short labels (Intro, Sandbox) at a
+     uniform width; nowrap + auto-grow lets longer labels (Carbon Recipe)
+     fit on a single line instead of wrapping mid-tab. */
+  min-width: 150px;
+  white-space: nowrap;
+  padding: 18px 18px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  text-align: left;
+  /* One paper-shade darker than --paper so inactive tabs read as "filed
+     behind" the active one (which sits on top, in --paper). */
+  color: #6f6d65;
+  background: #ece9da;
+  border: 1px solid var(--hairline);
+  border-radius: 3px 3px 0 0;
+  cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}
+.banner-tabs .tab + .tab { margin-left: -1px; }
+/* Hover: no transform, no shadow, just a tonal lift so neighbouring tabs
+   feel reachable without anything moving. */
+.banner-tabs .tab:hover {
+  background: #f2efe2;
+  border-color: #c8c5b4;
+  color: var(--ink);
+  z-index: 2;
+}
+.banner-tabs .tab.active {
+  /* Match the panel background below so the bottom edge dissolves into
+     the page, the active tab reads as "open onto" the content. */
+  color: var(--ink);
+  background: var(--paper);
+  border-bottom-color: var(--paper);  /* covers the banner's inset hairline */
+  z-index: 3;
+}
+/* Green liseré along the top edge, sits over the 1px hairline border so
+   it reads as a deliberate marker rather than a thickened border. */
+.banner-tabs .tab.active::before {
+  content: "";
+  position: absolute;
+  top: -1px; left: -1px; right: -1px;
+  height: 2px;
+  background: var(--green);
+}
+
+/* ============================================================================
+   Sticky section nav, STANDALONE styles, no inheritance from .banner-tabs.
+
+   The strip slides down from the top of the viewport once the user scrolls
+   past the in-banner tab row. Visibility is driven by .is-tabs-stuck on
+   <body>, toggled by an IntersectionObserver in tabs.js watching the
+   in-banner #tab-nav.
+
+   Design, restate the in-banner tab row verbatim (same colours, same
+   hairline, same active-tab "dissolve into the panel below" trick), then
+   add a small headroom on top so the cards visibly poke up from the strip
+   like file dividers, that's what keeps the "onglet" / folder-tab read
+   even though the strip itself is just a thin horizontal bar.
+============================================================================ */
+.sticky-nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 100;
+  /* Reproduce the .carbon-banner backing verbatim, same dotted grain
+     + symmetric green vertical stripes over the same --paper base, so
+     the sticky strip reads as a slice of the banner pinned to the
+     viewport top, not as a foreign UI bar. The inactive cards (#ece9da)
+     stay one shade darker than this paper so they still pop, exactly
+     like in the banner. */
+  background:
+    radial-gradient(circle at 22% 32%, rgba(0, 0, 0, 0.065), transparent 1px),
+    radial-gradient(circle at 78% 64%, rgba(0, 0, 0, 0.06), transparent 1px),
+    linear-gradient(90deg, rgba(49, 127, 63, 0.025), transparent 34%, transparent 66%, rgba(49, 127, 63, 0.025)),
+    var(--paper);
+  background-size: 7px 7px, 11px 11px, auto, auto;
+  /* Bottom hairline (inset shadow) same colour as the banner's
+     own bottom rule so the two lines visually align. No outer drop
+     shadow, the strip sits flush against the page paper. */
+  box-shadow: inset 0 -1px 0 #cfcdbf;
+  /* Tiny headroom above the tabs, the strip is taller than the tab cards
+     so the cards visibly stand up from it, keeping the "onglet" feel even
+     once it's detached from the banner. */
+  padding-top: 7px;
+  /* Hidden state: lifted above the viewport; transform animates cheaply
+     (compositor-only, no reflow). */
+  transform: translateY(-100%);
+  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+}
+.is-tabs-stuck .sticky-nav {
+  transform: translateY(0);
+  pointer-events: auto;
+}
+.sticky-nav__inner {
+  display: flex;
+  align-items: stretch;
+  /* Brand to the left, tab cluster pinned to the right. */
+  justify-content: space-between;
+  max-width: 1200px;
+  /* Match the container.wide horizontal padding so the strip's tabs sit
+     at the same left edge as the content column underneath. */
+  margin: 0 auto;
+  padding: 0 32px;
+}
+/* Left-side identity: stacked title + breadcrumb path, mirroring the
+   in-banner .banner-breadcrumb verbatim so the two reads as the same
+   model-card identity. Anchored as a link back to the top of the page. */
+.sticky-nav__brand {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  line-height: 1.2;
+  text-decoration: none;
+  color: inherit;
+  /* Sits flush with the tab tops, push the brand down by the same 7px
+     as .sticky-nav padding-top so it's vertically centred against the
+     full tab card, not against the headroom above them. */
+  padding-bottom: 7px;
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+}
+.sticky-nav__brand .banner-title { font-size: 13px; }
+.sticky-nav__brand .banner-path  { font-size: 10.5px; }
+.sticky-nav__brand:hover .banner-title { color: var(--green); }
+.sticky-nav__tabs {
+  display: flex;
+  align-items: stretch;
+}
+.sticky-nav .tab {
+  position: relative;
+  display: flex;
+  align-items: center;
+  /* Same min-width / nowrap pattern as the in-banner tabs, short labels
+     hold their slot, long labels grow to fit. */
+  min-width: 150px;
+  white-space: nowrap;
+  padding: 18px 18px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  text-align: left;
+  /* Sharp corners on the sticky variant, the strip is a thin slab so
+     the cards read better as squared "file dividers" than as the rounded
+     index cards used in the larger in-banner row. */
+  color: #6f6d65;
+  background: #ece9da;
+  border: 1px solid #b8b5a6;
+  border-radius: 0;
+  cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+}
+/* Overlap adjacent borders so the inter-tab divider is a single 1px line
+   (no double-hairline / no gap). */
+.sticky-nav .tab + .tab { margin-left: -1px; }
+.sticky-nav .tab:hover:not(.active) {
+  background: #f2efe2;
+  border-color: #9c9989;
+  color: var(--ink);
+  z-index: 2;
+}
+.sticky-nav .tab.active {
+  color: var(--ink);
+  background: var(--paper);
+  /* Drop the bottom border outright, combined with margin-bottom: -1px,
+     the active card bleeds one pixel beyond the strip's bottom hairline
+     and dissolves directly into the page paper underneath, same trick
+     the in-banner active tab uses against the panel below. */
+  border-bottom: none;
+  margin-bottom: -1px;
+  z-index: 3;
+}
+/* Green liseré along the TOP edge of the active card, sits over its own
+   1px top hairline, same green as the wordmark caret and the in-banner
+   active marker. */
+.sticky-nav .tab.active::before {
+  content: "";
+  position: absolute;
+  top: -1px; left: -1px; right: -1px;
+  height: 2px;
+  background: var(--green);
+}
+
+/* --- Helix column. The canvas is positioned absolutely so its natural ratio
+       isn't constrained by the grid track; we let it bleed slightly above and
+       below the banner for a "spilling out of the bench" effect. The CSS
+       rotate gives the technical tilt that the user asked for. --- */
+.banner-helix {
+  position: relative;
+  min-width: 0;
+  align-self: stretch;
+  /* No clip-path here: we want the canvas to bleed up to the banner's top
+     edge (= top of the page) so the helix isn't trapped below the 20px
+     padding-top of .banner-inner. Clipping at the banner boundary is
+     handled by .carbon-banner's overflow:hidden, which trims the rotated
+     corners cleanly at the banner's outer top/bottom/sides. */
+}
+/* The canvas overshoots the banner top/bottom so the helix appears to spill
+   beyond the editorial frame. .carbon-banner has overflow: hidden which clips
+   the overshoot cleanly. The tilt is a subtle clockwise lean, the "blueprint
+   on the lab bench" feel. */
+.cb-helix-canvas {
+  position: absolute;
+  top: -90px;
+  bottom: -90px;
+  right: -48px;
+  width: calc(100% + 48px);
+  height: calc(100% + 180px);
+  display: block;
+  pointer-events: none;
+  /* Slight leftward shift so the helix sits closer to the wordmark instead
+     of hugging the right edge of the banner. */
+  transform: translateX(-25px) rotate(5deg);
+  transform-origin: 60% 50%;
+}
+
+/* --- Responsive ---------------------------------------------------------
+   < 900px : collapse the grid so the helix moves below the headline. We
+   give it a fixed aspect so the canvas keeps its proportions. */
+@media (max-width: 720px) {
+  .banner-inner {
+    grid-template-columns: 1fr;
+    min-height: auto;
+    padding: 18px 18px 0;
+  }
+  /* Hide the DNA helix on narrow viewports: the canvas animation is
+     expensive on mobile and the banner already feels dense without it.
+     We keep the element semantically present but visually removed. */
+  .banner-helix {
+    display: none;
+  }
+  .banner-wordmark { font-size: clamp(56px, 16vw, 96px); }
+
+  /* Stack the spec list vertically on narrow viewports: at desktop sizes the
+     three specs read as a comma-separated tagline thanks to the inline "·"
+     separators, but on mobile that row crams into ~320px and the dots end up
+     looking like accidental punctuation. Switching to column drops the
+     separators (hidden below) and gives each spec its own line, matching the
+     stacked links treatment underneath. The bumped top margin opens a small
+     breathing room above the first spec so the block doesn't collide with
+     the wordmark/subtitle stack. */
+  .banner-specs {
+    flex-direction: column;
+    align-items: flex-start;
+    margin-top: 18px;
+  }
+  .banner-spec + .banner-spec::before {
+    content: none;
+  }
+
+  /* Same treatment for the resource links (Models / Tech report / Code).
+     Each <li> takes its own row; the anchor stays inline so the underline
+     hugs the text instead of stretching the full column width. The extra
+     margin-bottom matches the new top spacing on .banner-specs and keeps a
+     clear gap before the tab strip below. */
+  .banner-links {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 24px;
+  }
+  .banner-links li {
+    width: auto;
+  }
+
+  /* Let the four tabs split the row evenly so they fit a narrow viewport
+     without horizontal scroll. min-width: 0 overrides the desktop 150px
+     floor; nowrap stays on so "Carbon Recipe" doesn't wrap mid-tab. */
+  .banner-tabs { width: 100%; }
+  .banner-tabs .tab { min-width: 0; flex: 1 1 0; padding: 14px 8px; font-size: 10px; letter-spacing: 0.08em; }
+
+  /* Sticky nav goes mobile too: drop the CARBON/huggingfacebio brand on
+     the left (the in-banner hero has already scrolled away by the time
+     this strip appears, but on narrow viewports the brand + 3×150px tabs
+     simply won't fit on one line). Tabs then expand to fill the row
+     evenly, mirroring the in-banner mobile treatment above. */
+  .sticky-nav__inner {
+    padding: 0 18px;
+  }
+  .sticky-nav__brand {
+    display: none;
+  }
+  .sticky-nav__tabs {
+    flex: 1 1 auto;
+    width: 100%;
+  }
+  .sticky-nav .tab {
+    /* min-width: 0 overrides the desktop 150px floor so four tabs +
+       padding can fit in the narrow strip; nowrap stays on so
+       "Carbon Recipe" doesn't wrap mid-tab. */
+    min-width: 0;
+    flex: 1 1 0;
+    padding: 14px 8px;
+    font-size: 10px;
+    /* Slightly tighter tracking so 'SANDBOX' / 'CARBON RECIPE' fit
+       comfortably at narrow widths without truncating. */
+    letter-spacing: 0.08em;
+  }
+}

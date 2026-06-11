@@ -1,0 +1,163 @@
+/* section-umap.css, §6 Embedding space (WebGL scatter, 571K points)
+   styling: framing canvas, hover tooltip, status overlay, in-place
+   cluster annotations, and the colour legend strip below. */
+
+.umap-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  /* Slight off-white that matches the editorial paper tone (body uses
+     #f7f5ee). Pure white made the desaturated minority biotypes vanish
+     into the page and made the saturated palette look harsh. */
+  background: #fbfaf6;
+  border: 1px solid #e5e3da;
+  overflow: hidden;
+}
+.umap-canvas {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  display: block;
+  cursor: grab;
+  touch-action: none;
+}
+.umap-canvas.panning { cursor: grabbing; }
+.umap-tooltip {
+  position: absolute;
+  pointer-events: none;
+  background: #1f1f1d; color: #f7f5ee;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px; line-height: 1.4;
+  padding: 6px 9px;
+  border-radius: 2px;
+  white-space: nowrap;
+  opacity: 0;
+  transform: translate(8px, -100%);
+  transition: opacity 0.12s;
+  z-index: 4;
+}
+.umap-tooltip.visible { opacity: 0.96; }
+.umap-tooltip .t-label {
+  color: #8c918b;
+  text-transform: uppercase; letter-spacing: 1px;
+  font-size: 8px;
+  margin-right: 4px;
+}
+.umap-status-overlay {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  color: #aaa;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px; letter-spacing: 1.5px;
+  text-transform: uppercase;
+  background: rgba(247, 245, 238, 0.85);
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+.umap-status-overlay.hidden { opacity: 0; }
+
+/* Cluster-name annotations sit DIRECTLY on top of each cluster's
+   centroid, no leader lines, no margin anchors, no body text.
+   Editorial choice: the names *are* the annotation, set in heavier
+   type with a strong paper-coloured halo so they read clean against
+   coloured data underneath. Cf. classic Hillis radial trees, Tufte's
+   "small multiples with labels-in-place". pointer-events:none so the
+   canvas keeps every hover. */
+.umap-annotations {
+  position: absolute; inset: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+.ann-label {
+  position: absolute;
+  /* Centre on (left, top), JS sets those to the screen-space
+     coordinates of the cluster centroid. */
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+  font-family: "Inter", sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  color: #1f1f1d;
+  /* Real glyph outline (not a rectangle, not a blurred halo). The
+     trick is `paint-order: stroke fill`, without it `-webkit-text-
+     stroke` paints centred on the glyph contour, eating half its
+     inside and turning bold type into spindly outlined type. With
+     stroke-then-fill, the cream stroke is painted first as a
+     silhouette, then the dark fill drops on top at full thickness.
+     Net visible: a clean ~2.5 px cream halo following each letter
+     shape exactly. Reads cleanly over any colour underneath
+     (including the saturated vertebrates blue + AT-rich teal that
+     killed earlier blur-shadow attempts). */
+  -webkit-text-stroke: 5px #fbfaf6;
+          text-stroke: 5px #fbfaf6;
+  paint-order: stroke fill;
+  transition: opacity 0.18s;
+}
+/* Highlights toolbar: a second row under "color by" listing curated
+   gene sets a colleague flagged (HOX paralogs, mitochondrial genome…). */
+.umap-highlight-toolbar {
+  margin-top: -8px;       /* tighten gap to the colour-by row above */
+  margin-bottom: 12px;
+}
+/* Per-mode description above the chart. One short paragraph that swaps
+   to whatever colour-by or highlight is active, replacing what used to
+   be a static "N sequences · M species" stat-line — the stats moved
+   into the stat-row below the canvas, so this slot is free to carry
+   real editorial. */
+.umap-mode-desc {
+  font-family: "Inter", sans-serif;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #4a4a48;
+  margin: 0 0 12px;
+  /* Hold ~4 lines so the canvas doesn't bounce around as the user
+     switches between a short mode (strand) and a long one (GC content
+     or mt-DNA). Longer descriptions still grow past this without
+     clamping, just with a smaller visual jump. */
+  min-height: 6em;
+}
+/* Navigation hint lives inside .stat-row as a right-floated sibling of
+   the stat-pairs. margin-left:auto absorbs the flex gap so it pins to
+   the right edge regardless of how many stats sit on the left, and
+   align-self:flex-end keeps it lined up with the *values* row (the
+   visually heavier line) rather than centred between label and value. */
+.umap-nav-hint {
+  margin-left: auto;
+  align-self: flex-end;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+.umap-legend {
+  display: flex; flex-wrap: wrap;
+  gap: 6px 14px;
+  margin-top: 10px;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px;
+  color: #666;
+}
+.umap-legend .swatch {
+  display: inline-block;
+  width: 9px; height: 9px;
+  margin-right: 5px;
+  vertical-align: middle;
+  border-radius: 2px;
+}
+.umap-legend .item {
+  display: inline-flex;
+  align-items: center;
+  cursor: default;
+}
+.umap-legend .item.gc-grad {
+  gap: 8px;
+}
+.umap-legend .item.gc-grad svg {
+  border-radius: 2px;
+  display: block;
+}
+.umap-legend .item.gc-grad .gc-ticks {
+  letter-spacing: 0.5px;
+  color: #888;
+}

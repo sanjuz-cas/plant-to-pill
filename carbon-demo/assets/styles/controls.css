@@ -1,0 +1,88 @@
+/* controls.css, shared interactive atoms used by every demo card:
+   the demo card frame, demo-toolbar row, action buttons, pill toggles,
+   stub placeholders for unbuilt demos, and the .status pill (idle /
+   streaming / error). */
+
+/* --- Demo card (the interactive box inside each section) --- */
+.demo {
+  background: #fff; border: 1px solid #ddd;
+  padding: 24px; margin: 24px 0;
+}
+.demo-toolbar {
+  display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  margin-bottom: 16px;
+  font-family: "JetBrains Mono", monospace; font-size: 10px;
+  color: #666; text-transform: uppercase; letter-spacing: 1px;
+}
+.demo-toolbar .spacer { flex: 1; }
+
+/* --- Buttons ---
+   `.pill` size is the canonical pill size used across every demo (the
+   §7 Species tree toolbar set the precedent: 11px mono / 5px 11px
+   padding / 6px gap reads cleanly without dominating the toolbar).
+   Demo-specific stylesheets only override colour or text-transform,
+   never the size, so the pill rhythm stays identical between sections. */
+button.action, .pill {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px; font-weight: 400;
+  padding: 5px 11px; border: 1px solid #ccc; border-radius: 3px;
+  background: #fff; color: #555; cursor: pointer;
+  text-transform: uppercase; letter-spacing: 1.5px;
+  transition: all 0.15s;
+}
+button.action:hover, .pill:hover { border-color: #888; color: #1f1f1d; }
+button.action.primary { background: #1f1f1d; color: #fff; border-color: #1f1f1d; }
+button.action.primary:hover { background: #000; }
+button.action:disabled { opacity: 0.4; cursor: not-allowed; }
+button.action.primary:disabled { background: #888; border-color: #888; }
+.pill.active { background: #1f1f1d; color: #fff; border-color: #1f1f1d; }
+/* flex-wrap so pill rows (variants, genes, species…) break onto a second
+   line on narrow viewports instead of overflowing the .demo-toolbar to
+   the right. The 6px gap doubles as the row-gap when wrapping kicks in. */
+.pills { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+
+/* Mobile: force the pills span onto its own toolbar row (`flex-basis: 100%`)
+   so labels like "color by" / "highlights" stack above and the pills get
+   the full card width to wrap into. Without this, the label eats horizontal
+   space, the pills get squeezed, and you end up with awkward orphan-pill
+   rows ("GENE LENGTH" alone, "MITOCHONDRIAL" alone). The spacer is dropped
+   too, otherwise it leaves a phantom blank row before the trailing action
+   buttons (which then wrap to their own row at their natural width). */
+@media (max-width: 600px) {
+  .demo-toolbar .pills { flex: 0 0 100%; }
+  .demo-toolbar .spacer { display: none; }
+}
+
+/* --- Stub placeholder for unbuilt demos --- */
+.stub {
+  padding: 48px 24px; text-align: center; color: #999;
+  font-family: "JetBrains Mono", monospace; font-size: 11px;
+  text-transform: uppercase; letter-spacing: 2px;
+  border: 1px dashed #ddd; background: #fff;
+}
+.stub-tag {
+  display: inline-block; padding: 2px 8px;
+  border: 1px solid #ddd; border-radius: 2px;
+  font-size: 9px; color: #aaa; margin-bottom: 8px;
+}
+
+/* --- Status pill (streaming / error / done · X bp) shared by demo
+       toolbars. Hidden by default until a real state happens, there's
+       no "idle" UI; before the user has done anything, no pill at all.
+       setStatus() in each demo adds/removes .is-hidden based on whether
+       it has something meaningful to show. --- */
+.status {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 10px; color: #666;
+  text-transform: uppercase; letter-spacing: 1.5px;
+  display: inline-flex; align-items: center; gap: 6px;
+  margin-left: 8px;
+}
+.status.is-hidden { display: none; }
+.status .dot {
+  display: inline-block; width: 6px; height: 6px; border-radius: 50%;
+  background: #888;
+}
+/* `pulse` keyframe lives in base.css so it's defined before any consumer. */
+.status.streaming .dot { background: #317f3f; animation: pulse 1.2s ease-in-out infinite; }
+.status.error { color: #b00020; }
